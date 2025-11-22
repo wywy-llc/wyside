@@ -37,7 +37,7 @@ const DEFAULT_PACKAGE_JSON_CONTENT: PackageJson = {
   keywords: [],
   scripts: {},
   engines: {
-    node: '>=22',
+    node: '>=12',
   },
 };
 

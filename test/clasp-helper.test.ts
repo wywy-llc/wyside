@@ -15,20 +15,21 @@
  */
 import spawn from 'cross-spawn';
 import * as fs from 'fs-extra';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ClaspHelper } from '../src/clasp-helper';
 
-jest.mock('fs-extra');
+vi.mock('fs-extra');
 
 describe('clasp-helper', () => {
   const claspHelper = new ClaspHelper();
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('isLoggedIn', () => {
     it('returns not logged in if clasprc does not exist', async () => {
-      jest.spyOn(fs, 'exists').mockImplementationOnce(async () => {
+      vi.mocked(fs.exists).mockImplementationOnce(async () => {
         return false;
       });
 
@@ -38,7 +39,7 @@ describe('clasp-helper', () => {
     });
 
     it('returns logged in if clasprc exists', async () => {
-      jest.spyOn(fs, 'exists').mockImplementationOnce(async () => {
+      vi.mocked(fs.exists).mockImplementationOnce(async () => {
         return true;
       });
 
@@ -50,9 +51,19 @@ describe('clasp-helper', () => {
 
   describe('login', () => {
     it('does clasp login if not logged in', async () => {
-      const spawnSyncSpy = jest.spyOn(spawn, 'sync').mockImplementation();
+      const spawnSyncSpy = vi.spyOn(spawn, 'sync').mockImplementation(() => {
+        return {
+          status: 0,
+          output: [],
+          pid: 0,
+          signal: null,
+          stdout: '',
+          stderr: '',
+        };
+      });
 
-      jest.spyOn(claspHelper as any, 'isLoggedIn').mockReturnValue(false);
+      // @ts-expect-error Testing private method
+      vi.spyOn(claspHelper, 'isLoggedIn').mockReturnValue(false);
 
       await claspHelper.login();
 
@@ -62,13 +73,21 @@ describe('clasp-helper', () => {
     });
 
     it('does nothing if already logged in', async () => {
-      const spawnSyncSpy = jest.spyOn(spawn, 'sync').mockImplementation();
+      const spawnSyncSpy = vi.spyOn(spawn, 'sync').mockImplementation(() => {
+        return {
+          status: 0,
+          output: [],
+          pid: 0,
+          signal: null,
+          stdout: '',
+          stderr: '',
+        };
+      });
 
-      jest
-        .spyOn(claspHelper as any, 'isLoggedIn')
-        .mockImplementationOnce(async () => {
-          return true;
-        });
+      // @ts-expect-error Testing private method
+      vi.spyOn(claspHelper, 'isLoggedIn').mockImplementationOnce(async () => {
+        return true;
+      });
 
       await claspHelper.login();
 
@@ -78,7 +97,7 @@ describe('clasp-helper', () => {
 
   describe('isConfigured', () => {
     it('returns false if config files do not exist', async () => {
-      jest.spyOn(fs, 'exists').mockImplementation(async () => {
+      vi.mocked(fs.exists).mockImplementation(async () => {
         return false;
       });
 
@@ -88,10 +107,10 @@ describe('clasp-helper', () => {
     });
 
     it('returns true if config files exist', async () => {
-      jest.spyOn(fs, 'exists').mockImplementationOnce(async () => {
+      vi.mocked(fs.exists).mockImplementationOnce(async () => {
         return false;
       });
-      jest.spyOn(fs, 'exists').mockImplementationOnce(async () => {
+      vi.mocked(fs.exists).mockImplementationOnce(async () => {
         return true;
       });
 
@@ -103,8 +122,10 @@ describe('clasp-helper', () => {
 
   describe('clean', () => {
     it('removes all config files and creates root dir', async () => {
-      const fsRmSpy = jest.spyOn(fs, 'rm').mockImplementation();
-      const fsMkdirsSpy = jest.spyOn(fs, 'mkdirs').mockImplementation();
+      const fsRmSpy = vi.mocked(fs.rm).mockImplementation(async () => {});
+      const fsMkdirsSpy = vi
+        .mocked(fs.mkdirs)
+        .mockImplementation(async () => {});
 
       await claspHelper.clean('rootDir');
 
@@ -162,8 +183,10 @@ describe('clasp-helper', () => {
 
   describe('arrangeFiles', () => {
     it('arranges files appropriately with no scriptIdProd', async () => {
-      const fsMoveSpy = jest.spyOn(fs, 'move').mockImplementation();
-      const fsCopyFileSpy = jest.spyOn(fs, 'copyFile').mockImplementation();
+      const fsMoveSpy = vi.mocked(fs.move).mockImplementation(async () => {});
+      const fsCopyFileSpy = vi
+        .mocked(fs.copyFile)
+        .mockImplementation(async () => {});
 
       await claspHelper.arrangeFiles('rootDir');
 
@@ -181,10 +204,10 @@ describe('clasp-helper', () => {
     });
 
     it('arranges files appropriately with scriptIdProd', async () => {
-      jest.spyOn(fs, 'move').mockImplementation();
-      const writeConfigSpy = jest
+      vi.mocked(fs.move).mockImplementation(async () => {});
+      const writeConfigSpy = vi
         .spyOn(claspHelper, 'writeConfig')
-        .mockImplementation();
+        .mockImplementation(async () => {});
 
       await claspHelper.arrangeFiles('rootDir', 'abc123');
 
@@ -198,14 +221,25 @@ describe('clasp-helper', () => {
 
   describe('cloneAndPull', () => {
     it('calls clasp clone and clasp pull', async () => {
-      const spawnSyncSpy = jest.spyOn(spawn, 'sync').mockImplementation();
-      const cleanSpy = jest.spyOn(claspHelper, 'clean').mockImplementation();
-      const writeConfigSpy = jest
+      const spawnSyncSpy = vi.spyOn(spawn, 'sync').mockImplementation(() => {
+        return {
+          status: 0,
+          output: [],
+          pid: 0,
+          signal: null,
+          stdout: '',
+          stderr: '',
+        };
+      });
+      const cleanSpy = vi
+        .spyOn(claspHelper, 'clean')
+        .mockImplementation(async () => {});
+      const writeConfigSpy = vi
         .spyOn(claspHelper, 'writeConfig')
-        .mockImplementation();
-      const arrangeFilesSpy = jest
+        .mockImplementation(async () => {});
+      const arrangeFilesSpy = vi
         .spyOn(claspHelper, 'arrangeFiles')
-        .mockImplementation();
+        .mockImplementation(async () => {});
 
       await claspHelper.cloneAndPull('1', '2', 'rootDir');
 

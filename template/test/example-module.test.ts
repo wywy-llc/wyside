@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { describe, it, expect } from 'vitest';
 import { hello } from '../src/example-module';
 
 describe('example-module', () => {

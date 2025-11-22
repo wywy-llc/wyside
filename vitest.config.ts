@@ -13,13 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { describe, it, expect } from 'vitest';
-import { hello } from '../src/example-module';
 
-describe('example-module', () => {
-  describe('hello', () => {
-    it('Returns a hello message', () => {
-      expect(hello()).toBe('Hello Apps Script!');
-    });
-  });
+import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  test: {
+    globals: true,
+    environment: 'node',
+    include: [
+      'test/**/*.test.ts',
+      'template/**/*.test.ts',
+      'template-ui/**/*.test.ts',
+    ],
+  },
 });
