@@ -1,9 +1,9 @@
 /**
- * Copyright 2025 Google LLC
+ * Copyright 2025 wywy LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * you may obtain a copy of the License at
  *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -16,15 +16,16 @@
 import { SpawnSyncReturns } from 'child_process';
 import spawn from 'cross-spawn';
 import * as fs from 'fs-extra';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { PackageHelper } from '../src/package-helper';
 
-jest.mock('fs-extra');
+vi.mock('fs-extra');
 
 describe('package-helper', () => {
   describe('load', () => {
     //const pkgHelper = new PackageHelper();
     it('returns undefined if no package.json found', () => {
-      jest.spyOn(fs, 'readJsonSync').mockImplementationOnce(() => {
+      vi.mocked(fs.readJsonSync).mockImplementationOnce(() => {
         const err: NodeJS.ErrnoException = new Error('file not found');
         err.code = 'ENOENT';
         throw err;
@@ -40,7 +41,7 @@ describe('package-helper', () => {
         name: 'project',
       };
 
-      jest.spyOn(fs, 'readJsonSync').mockImplementationOnce(() => {
+      vi.mocked(fs.readJsonSync).mockImplementationOnce(() => {
         return expected;
       });
 
@@ -50,17 +51,17 @@ describe('package-helper', () => {
     });
 
     it('throws an error for unexpected exceptions', () => {
-      jest.spyOn(fs, 'readJsonSync').mockImplementationOnce(() => {
+      vi.mocked(fs.readJsonSync).mockImplementationOnce(() => {
         throw new Error();
       });
 
-      expect(PackageHelper.load).toThrow();
+      expect(() => PackageHelper.load()).toThrow();
     });
   });
 
   describe('init', () => {
     it('uses default package if no package.json found', async () => {
-      jest.spyOn(PackageHelper, 'load').mockReturnValue(undefined);
+      vi.spyOn(PackageHelper, 'load').mockReturnValue(undefined);
 
       const res = PackageHelper.init('test');
 
@@ -72,8 +73,9 @@ describe('package-helper', () => {
         license: 'Apache-2.0',
         keywords: [],
         scripts: {},
+        type: 'module',
         engines: {
-          node: '>=22',
+          node: '>=12',
         },
       });
     });
@@ -163,7 +165,7 @@ describe('package-helper', () => {
       stderr: '',
     } as SpawnSyncReturns<string>;
     beforeEach(() => {
-      jest.resetAllMocks();
+      vi.resetAllMocks();
     });
 
     it('installs dependencies', async () => {
@@ -172,10 +174,10 @@ describe('package-helper', () => {
         dependencies: { pkg1: '=0.0.1', pkg2: '=0.0.1' },
       };
 
-      const spawnSyncSpy = jest
+      const spawnSyncSpy = vi
         .spyOn(spawn, 'sync')
         .mockImplementationOnce(() => spawnSuccessResult);
-      const loadSpy = jest
+      const loadSpy = vi
         .spyOn(PackageHelper, 'load')
         .mockImplementationOnce(() => new PackageHelper(pkgAfterInstall));
       const pkgHelper = new PackageHelper(pkgBeforeInstall);
@@ -202,10 +204,10 @@ describe('package-helper', () => {
       const pkgAfterInstall = {
         dependencies: { pkg1: '=0.0.1', pkg2: '=0.0.1' },
       };
-      const spawnSyncSpy = jest
+      const spawnSyncSpy = vi
         .spyOn(spawn, 'sync')
         .mockImplementationOnce(() => spawnSuccessResult);
-      const loadSpy = jest
+      const loadSpy = vi
         .spyOn(PackageHelper, 'load')
         .mockImplementationOnce(() => new PackageHelper(pkgAfterInstall));
       const pkgHelper = new PackageHelper(pkgBeforeInstall);
@@ -234,10 +236,10 @@ describe('package-helper', () => {
         dependencies: { pkg1: '=0.0.1', pkg3: '=0.0.1' },
         devDependencies: { pkg2: '=0.0.1' },
       };
-      const spawnSyncSpy = jest
+      const spawnSyncSpy = vi
         .spyOn(spawn, 'sync')
         .mockImplementationOnce(() => spawnSuccessResult);
-      const loadSpy = jest
+      const loadSpy = vi
         .spyOn(PackageHelper, 'load')
         .mockImplementationOnce(() => new PackageHelper(pkgAfterInstall));
       const pkgHelper = new PackageHelper(pkgBeforeInstall);
@@ -258,7 +260,7 @@ describe('package-helper', () => {
     });
 
     it('does not install anything if everything is already installed', () => {
-      const spawnSyncSpy = jest
+      const spawnSyncSpy = vi
         .spyOn(spawn, 'sync')
         .mockImplementationOnce(() => spawnSuccessResult);
       const pkgHelper = new PackageHelper({

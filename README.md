@@ -3,7 +3,7 @@ Copyright 2025 wywy LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+you may obtain a copy of the License at
 
       http://www.apache.org/licenses/LICENSE-2.0
 
@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# wyside(wywy + aside)
+# wyside
 
-- **Note**: This is a community-maintained fork of [@google/aside](https://github.com/google/aside).
+- **Note**: This is a community-maintained fork of [@wywyjp/wyside](https://github.com/google/aside).
 - The original project is created by Google but is not officially supported.
 
 ## Overview
@@ -45,8 +45,8 @@ Here are the main features:
 
 The simplest way to get started is:
 
-```
-npx @google/aside init
+```bash
+npx @wywyjp/wyside init
 ```
 
 ## What it does
@@ -72,6 +72,51 @@ After running the `init` command above, ASIDE will go ahead and do the following
 - **(Optionally) Create an Angular Material UI**
 
   ASIDE will run the necessary commands to create an Angular application with Angular Material components, if the option is chosen
+
+## UI Development
+
+If you chose to create an Angular UI during initialization, you can find the source code in `src/ui`. This is a standard Angular application.
+
+### Development
+
+To run the UI locally during development:
+
+```bash
+npm run serve-ui
+```
+
+This will start the Angular development server (usually at <http://localhost:4200>).
+
+### Deployment
+
+To deploy your project including the UI to Google Apps Script:
+
+```bash
+npm run deploy
+```
+
+This command automates the following steps:
+
+1. Builds the Angular application.
+2. Converts the build artifacts into GAS-compatible HTML files (using `deploy-ui.mjs`).
+3. Pushes the code to your Apps Script project using `clasp`.
+
+### Server-side Integration
+
+Ensure your GAS server-side code (e.g., `src/index.ts`) is set up to serve the UI. You typically need a `doGet` function and an `include` helper:
+
+```typescript
+function doGet() {
+  return HtmlService.createTemplateFromFile('ui')
+    .evaluate()
+    .setTitle('My App')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+function include(filename: string) {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+```
 
 ## Options
 

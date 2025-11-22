@@ -1,9 +1,9 @@
 /**
- * Copyright 2025 Google LLC
+ * Copyright 2025 wywy LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * you may obtain a copy of the License at
  *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -18,7 +18,9 @@ import fs from 'fs-extra';
 import path from 'path';
 
 const cwd = process.cwd();
-const uiDist = path.join(cwd, 'src/ui/dist/ui/browser');
+const uiDist = process.argv[2]
+  ? path.resolve(cwd, process.argv[2])
+  : path.join(cwd, 'src/ui/dist/ui/browser');
 const files = fs
   .readdirSync(uiDist)
   .filter(f => f.endsWith('.html') || f.endsWith('.js') || f.endsWith('.css'));

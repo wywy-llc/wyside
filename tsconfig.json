@@ -14,5 +14,11 @@
     "allowUnreachableCode": false,
     "allowUnusedLabels": false
   },
-  "include": ["src/**/*", "test/**/*", "rollup.config.mjs"]
+  "include": [
+    "src/**/*",
+    "test/**/*",
+    "rollup.config.mjs",
+    "vitest.config.ts",
+    "__mocks__/**/*.ts"
+  ]
 }
