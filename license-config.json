@@ -7,7 +7,9 @@
     "dist",
     "*.md",
     "*.yml",
-    "*.html"
+    "*.html",
+    ".serena",
+    "docs"
   ],
   "license": "license-header.txt",
   "licenseFormats": {
