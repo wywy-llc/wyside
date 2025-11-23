@@ -352,6 +352,55 @@ async function handleTemplate(options: Options) {
 }
 
 /**
+ * Generate .clasp-*.json files from environment variables if they exist.
+ * Reads from .env file if present.
+ */
+async function generateClaspConfigsFromEnv() {
+  // Try to load .env file if it exists
+  const envPath = path.join(process.cwd(), '.env');
+  if (await fs.pathExists(envPath)) {
+    const envContent = await fs.readFile(envPath, 'utf8');
+    const envLines = envContent.split('\n');
+    for (const line of envLines) {
+      const match = line.match(/^([A-Z_]+)=(.*)$/);
+      if (match) {
+        const [, key, value] = match;
+        if (!process.env[key]) {
+          process.env[key] = value;
+        }
+      }
+    }
+  }
+
+  const scriptIdDev = process.env.SCRIPT_ID_DEV;
+  const scriptIdProd = process.env.SCRIPT_ID_PROD;
+
+  if (scriptIdDev) {
+    const devConfig = {
+      scriptId: scriptIdDev,
+      rootDir: './dist',
+    };
+    await writeFileAtomic(
+      '.clasp-dev.json',
+      JSON.stringify(devConfig, null, 2)
+    );
+    debugLog('Generated .clasp-dev.json from SCRIPT_ID_DEV');
+  }
+
+  if (scriptIdProd) {
+    const prodConfig = {
+      scriptId: scriptIdProd,
+      rootDir: './dist',
+    };
+    await writeFileAtomic(
+      '.clasp-prod.json',
+      JSON.stringify(prodConfig, null, 2)
+    );
+    debugLog('Generated .clasp-prod.json from SCRIPT_ID_PROD');
+  }
+}
+
+/**
  * Set up clasp.
  *
  * @param {Options} options
@@ -368,6 +417,8 @@ async function handleClasp(options: Options) {
     : false;
 
   if (claspConfigExists && !overrideClasp) {
+    // Still try to generate from env if available
+    await generateClaspConfigsFromEnv();
     return;
   }
 
@@ -473,6 +524,10 @@ export async function init(
 
   // Handle clasp
   await handleClasp(options);
+
+  // Generate .clasp-*.json from environment variables if available
+  // This ensures they exist even if clasp create failed or was skipped
+  await generateClaspConfigsFromEnv();
 
   if (options.ui) {
     console.log();
