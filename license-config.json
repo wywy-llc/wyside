@@ -1,5 +1,14 @@
 {
-  "ignore": [".*", "*.txt", "CONTRIBUTING", "build", "dist", "*.md", "*.yml"],
+  "ignore": [
+    ".*",
+    "*.txt",
+    "CONTRIBUTING",
+    "build",
+    "dist",
+    "*.md",
+    "*.yml",
+    "*.html"
+  ],
   "license": "license-header.txt",
   "licenseFormats": {
     "js|ts|mjs": {
