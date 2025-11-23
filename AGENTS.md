@@ -35,3 +35,7 @@
 - Ensure each commit passes `npm run lint` and `npm test`.
 - PRs: include a short summary, linked issue (if any), test evidence/commands run, and notes on deployment impact (UI templates or Apps Script deploy flow).
 - For template or UI changes, call out whether `deploy-ui.mjs` or `setup-svelte.mjs` behavior is affected.
+
+## Notes
+
+- Svelte init dependency gap: Previously `npm install` failures were hidden (`--silent`, status unchecked) and peer conflict between `@sveltejs/vite-plugin-svelte@^3` and `vite@^7` left package.json without dependencies. Fixed by bumping Svelte/Tailwind/Vite plugin to current versions and surfacing npm errors (see `config.ts` and `package-helper.ts`). If install fails, check the emitted npm error.
