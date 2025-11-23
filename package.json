@@ -1,6 +1,6 @@
 {
   "name": "@wywyjp/wyside",
-  "version": "1.5.10",
+  "version": "1.5.11",
   "type": "module",
   "description": "Apps Script IDE framework",
   "bin": "dist/src/index.js",
