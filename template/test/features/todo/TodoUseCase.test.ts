@@ -1,9 +1,9 @@
+import { UniversalSheetsClient } from '@/core/client';
+import { TodoUseCase } from '@/features/todo/TodoUseCase';
+import { UniversalTodoRepo } from '@/features/todo/UniversalTodoRepo';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { UniversalSheetsClient } from '../../src/core/client.js';
-import { TodoUseCase } from '../../src/features/todo/TodoUseCase.js';
-import { UniversalTodoRepo } from '../../src/features/todo/UniversalTodoRepo.js';
 
-const SPREADSHEET_ID = process.env.TEST_SPREADSHEET_ID || '';
+const SPREADSHEET_ID = process.env.APP_SPREADSHEET_ID_1_DEV || '';
 
 describe('TodoUseCase Integration', () => {
   let client: UniversalSheetsClient;

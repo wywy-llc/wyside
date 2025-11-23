@@ -1,3 +1,6 @@
+import { google as googleApi } from 'googleapis';
+import path from 'path';
+
 type Environment = 'gas' | 'node';
 
 export class UniversalSheetsClient {
@@ -69,9 +72,8 @@ export class UniversalSheetsClient {
     spreadsheetId: string,
     requests: any[]
   ): Promise<any> {
-    const { google } = await import('googleapis');
     const auth = await this.getNodeAuth();
-    const sheets = google.sheets({ version: 'v4', auth });
+    const sheets = googleApi.sheets({ version: 'v4', auth });
 
     const response = await sheets.spreadsheets.batchUpdate({
       spreadsheetId,
@@ -84,9 +86,8 @@ export class UniversalSheetsClient {
     spreadsheetId: string,
     ranges: string[]
   ): Promise<any> {
-    const { google } = await import('googleapis');
     const auth = await this.getNodeAuth();
-    const sheets = google.sheets({ version: 'v4', auth });
+    const sheets = googleApi.sheets({ version: 'v4', auth });
 
     const response = await sheets.spreadsheets.values.batchGet({
       spreadsheetId,
@@ -98,14 +99,11 @@ export class UniversalSheetsClient {
   private async getNodeAuth() {
     if (this.auth) return this.auth;
 
-    const { google } = await import('googleapis');
-    const path = await import('path');
-
     const keyFilePath =
       process.env.GOOGLE_APPLICATION_CREDENTIALS ||
       path.join(process.cwd(), 'secrets/service-account.json');
 
-    this.auth = new google.auth.GoogleAuth({
+    this.auth = new googleApi.auth.GoogleAuth({
       keyFile: keyFilePath,
       scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });

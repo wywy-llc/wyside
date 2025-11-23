@@ -7,6 +7,11 @@
 **License:** Apache-2.0
 **Core Directive:** Initialize and manage local GAS development environments with TypeScript, Rollup, Vitest, and Clasp.
 
+**🚨 FUNDAMENTAL RULE:**
+
+- **NO GAS SDK usage in business logic** - ALL data operations MUST use REST APIs (`googleapis`) to enable local development and testing
+- Code in `template/src/` MUST run identically in both Node.js and GAS environments
+
 ### Technology Stack
 
 - **Runtime:** Node.js 22+ (ESM, Strict Mode)
@@ -59,6 +64,33 @@ wyside/
 
 ## 4. Development Guidelines
 
+### **🚨 CRITICAL: GAS SDK Usage Policy 🚨**
+
+**ABSOLUTELY FORBIDDEN in `template/src/` code:**
+
+- ❌ **NO `ScriptApp.getActiveSpreadsheet()`** or any `ScriptApp.*` methods (except `ScriptApp.getOAuthToken()` for REST API auth)
+- ❌ **NO `SpreadsheetApp.openById()`** or any direct `SpreadsheetApp.*` methods
+- ❌ **NO GAS SDK dependencies** in business logic or data access layers
+
+**WHY:** The core objective is to enable **local development and testing** with the exact same code that runs in GAS. Using GAS SDK breaks this:
+
+- ✗ Cannot run locally (GAS SDK only works in GAS runtime)
+- ✗ Cannot write meaningful tests
+- ✗ Defeats the purpose of the Wyside project
+
+**ALLOWED GAS SDK Usage:**
+
+- ✅ `ScriptApp.getOAuthToken()` - ONLY for obtaining OAuth tokens for REST API calls
+- ✅ `UrlFetchApp.fetch()` - For making HTTP requests to Google APIs
+- ✅ `SpreadsheetApp.getUi()` - ONLY in UI-related functions (`onOpen()`, etc.)
+- ✅ `HtmlService` - ONLY for serving HTML in GAS environment
+
+**REQUIRED APPROACH:**
+
+- ✅ **USE REST APIs** (`googleapis` npm package) for all Sheets operations
+- ✅ **USE environment-agnostic config** (`src/config.ts`) for spreadsheet IDs
+- ✅ **USE `UniversalSheetsClient`** pattern - detects environment and uses appropriate API
+
 ### Coding Standards
 
 - **Style:** TypeScript Strict Mode, ESM imports, PascalCase classes, camelCase functions.
@@ -93,10 +125,27 @@ wyside/
 
 ## 6. Critical Constraints & Pitfalls
 
-- **NO** native `spawn`; use `cross-spawn`.
-- **NO** direct `fs.writeFile`; use `write-file-atomic`.
-- **Template Immutability:** Templates are copied once; changes require a full `npm run build` and fresh `init` to test.
-- **Linting:** Do NOT lint `template/` directories (users customize these).
+### **🚨 ABSOLUTE PROHIBITIONS 🚨**
+
+1. **GAS SDK in Business Logic:**
+   - ❌ **NEVER use `ScriptApp.getActiveSpreadsheet()`, `SpreadsheetApp.openById()`, or any GAS SDK methods** in `template/src/` code (except for OAuth tokens and UI functions)
+   - ❌ Any code that uses GAS SDK **CANNOT run locally or be tested**
+   - ✅ **ONLY use REST APIs** (`googleapis` package) for data operations
+   - ✅ **Violation of this rule breaks the fundamental purpose of Wyside**
+
+2. **Process & File Operations:**
+   - **NO** native `spawn`; use `cross-spawn`.
+   - **NO** direct `fs.writeFile`; use `write-file-atomic`.
+
+3. **Template Management:**
+   - **Template Immutability:** Templates are copied once; changes require a full `npm run build` and fresh `init` to test.
+   - **Linting:** Do NOT lint `template/` directories (users customize these).
+
+### **Configuration Requirements**
+
+- **Spreadsheet IDs:** MUST use `src/config.ts` with `SpreadsheetType` enum and `APP_SPREADSHEET_ID_N_DEV/PROD` environment variables
+- **NO hardcoded IDs** in code
+- **Environment Detection:** Use `UniversalSheetsClient` pattern to detect Node.js vs GAS runtime
 
 ## 7. MCP Integration (New)
 
