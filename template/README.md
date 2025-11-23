@@ -35,7 +35,7 @@ If you are setting this up from scratch, follow these steps to obtain the necess
 
 1. Navigate to **IAM & Admin > Service Accounts**.
 2. Click **Create Service Account**.
-3. Give it a name (e.g., `wyside-local-dev`).
+3. Give it a name (e.g., `wyside`).
 4. (Optional) Grant "Editor" role if you want it to manage cloud resources, but for Sheets API, specific sharing (Step 3) is usually enough.
 5. Click **Done**.
 6. Click on the newly created service account (email format: `name@project-id.iam.gserviceaccount.com`).

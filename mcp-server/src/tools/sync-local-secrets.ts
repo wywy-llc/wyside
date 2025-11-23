@@ -70,7 +70,7 @@ export async function syncLocalSecrets(args: SyncLocalSecretsArgs) {
     }
 
     // 2. Create Service Account
-    const saName = 'wyside-local-dev';
+    const saName = 'wyside';
     const saEmail = `${saName}@${projectId}.iam.gserviceaccount.com`;
 
     // Check if SA exists
