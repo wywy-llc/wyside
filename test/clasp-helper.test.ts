@@ -186,6 +186,15 @@ describe('clasp-helper', () => {
 
       expect(res).toEqual('https://drive.google.com/abc123');
     });
+
+    it('extracts sheets link when clasp reports spreadsheet', () => {
+      const output =
+        'Created new spreadsheet: https://docs.google.com/spreadsheets/abc123/edit';
+
+      const res = claspHelper.extractSheetsLink(output);
+
+      expect(res).toEqual('https://docs.google.com/spreadsheets/abc123/edit');
+    });
   });
 
   describe('extractScriptLink', () => {
@@ -214,11 +223,14 @@ describe('clasp-helper', () => {
 
       await claspHelper.arrangeFiles('rootDir');
 
-      expect(fsMoveSpy).toHaveBeenCalledWith('.clasp.json', '.clasp-dev.json');
+      expect(fsMoveSpy).toHaveBeenCalledWith('.clasp.json', '.clasp-dev.json', {
+        overwrite: true,
+      });
 
       expect(fsMoveSpy).toHaveBeenCalledWith(
         'rootDir/appsscript.json',
-        'appsscript.json'
+        'appsscript.json',
+        { overwrite: true }
       );
 
       expect(fsCopyFileSpy).toHaveBeenCalledWith(
@@ -243,7 +255,9 @@ describe('clasp-helper', () => {
         'rootDir/.clasp.json',
         '.clasp.json'
       );
-      expect(fsMoveSpy).toHaveBeenCalledWith('.clasp.json', '.clasp-dev.json');
+      expect(fsMoveSpy).toHaveBeenCalledWith('.clasp.json', '.clasp-dev.json', {
+        overwrite: true,
+      });
     });
 
     it('arranges files appropriately with scriptIdProd', async () => {
@@ -317,7 +331,8 @@ describe('clasp-helper', () => {
       pathExistsMock
         .mockResolvedValueOnce(true) // dist/.clasp.json
         .mockResolvedValueOnce(false) // .clasp.json root
-        .mockResolvedValueOnce(true); // dist/appsscript.json
+        .mockResolvedValueOnce(true) // dist/appsscript.json
+        .mockResolvedValue(true);
       const copySpy = vi.mocked(fs.copyFile).mockImplementation(async () => {});
       const arrangeSpy = vi
         .spyOn(claspHelper, 'arrangeFiles')
@@ -362,7 +377,8 @@ describe('clasp-helper', () => {
       pathExistsMock
         .mockResolvedValueOnce(true) // dist/.clasp.json
         .mockResolvedValueOnce(false) // .clasp.json root
-        .mockResolvedValueOnce(true); // dist/appsscript.json
+        .mockResolvedValueOnce(true) // dist/appsscript.json
+        .mockResolvedValue(true);
       vi.mocked(fs.copyFile).mockResolvedValue();
       let arrangeFinished = false;
       vi.spyOn(claspHelper, 'arrangeFiles').mockImplementation(async () => {

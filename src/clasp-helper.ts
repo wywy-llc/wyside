@@ -83,7 +83,9 @@ export class ClaspHelper {
    * @returns {string}
    */
   extractSheetsLink(output: string) {
-    const sheetsLink = output.match(/Created new document: ([^\n]*)/);
+    const sheetsLink = output.match(
+      /Created new (?:document|spreadsheet|sheet)s?:\s*([^\s,]+)/i
+    );
 
     return sheetsLink?.length ? sheetsLink[1] : 'Not found';
   }
@@ -94,7 +96,9 @@ export class ClaspHelper {
    * @returns {string}
    */
   extractScriptLink(output: string) {
-    const scriptLink = output.match(/Created new script: ([^\n]*)/);
+    const scriptLink = output.match(
+      /Created new (?:script|project):\s*([^\s,]+)/i
+    );
 
     return scriptLink?.length ? scriptLink[1] : 'Not found';
   }
@@ -189,9 +193,17 @@ export class ClaspHelper {
       }
     }
 
-    await fs.move(rootClaspPath, '.clasp-dev.json');
+    const appsscriptPath = path.join(rootDir, 'appsscript.json');
+    const appsscriptExists = await fs.pathExists(appsscriptPath);
+    if (!appsscriptExists) {
+      throw new Error(
+        `Missing appsscript.json in ${rootDir}. clasp create or pull may have failed.`
+      );
+    }
 
-    await fs.move(path.join(rootDir, 'appsscript.json'), 'appsscript.json');
+    await fs.move(rootClaspPath, '.clasp-dev.json', { overwrite: true });
+
+    await fs.move(appsscriptPath, 'appsscript.json', { overwrite: true });
 
     if (scriptIdProd) {
       await this.writeConfig(scriptIdProd, rootDir, '.clasp-prod.json');
