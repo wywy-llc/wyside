@@ -372,10 +372,10 @@ async function generateClaspConfigsFromEnv() {
     }
   }
 
-  const scriptIdDev = process.env.SCRIPT_ID_DEV;
-  const scriptIdProd = process.env.SCRIPT_ID_PROD;
+  const scriptIdDev = process.env.SCRIPT_ID_DEV?.trim();
+  const scriptIdProd = process.env.SCRIPT_ID_PROD?.trim();
 
-  if (scriptIdDev) {
+  if (scriptIdDev && scriptIdDev.length > 0) {
     const devConfig = {
       scriptId: scriptIdDev,
       rootDir: './dist',
@@ -387,7 +387,7 @@ async function generateClaspConfigsFromEnv() {
     debugLog('Generated .clasp-dev.json from SCRIPT_ID_DEV');
   }
 
-  if (scriptIdProd) {
+  if (scriptIdProd && scriptIdProd.length > 0) {
     const prodConfig = {
       scriptId: scriptIdProd,
       rootDir: './dist',
@@ -523,7 +523,19 @@ export async function init(
   }
 
   // Handle clasp
-  await handleClasp(options);
+  try {
+    await handleClasp(options);
+  } catch (e) {
+    console.error(
+      chalk.yellow('Clasp setup encountered an issue:'),
+      e instanceof Error ? e.message : String(e)
+    );
+    console.log(
+      chalk.yellow(
+        'Continuing with initialization. You can configure clasp manually later.'
+      )
+    );
+  }
 
   // Ensure appsscript.json exists (copy from template if missing)
   if (!(await fs.pathExists('appsscript.json'))) {
@@ -540,6 +552,34 @@ export async function init(
   // Generate .clasp-*.json from environment variables if available
   // This ensures they exist even if clasp create failed or was skipped
   await generateClaspConfigsFromEnv();
+
+  // Ensure .clasp-dev.json and .clasp-prod.json exist (create placeholders if missing)
+  if (!(await fs.pathExists('.clasp-dev.json'))) {
+    console.log(
+      chalk.yellow(
+        'Note: .clasp-dev.json not found. Creating placeholder. Update SCRIPT_ID_DEV in .env and run init again.'
+      )
+    );
+    const placeholderConfig = {
+      scriptId: 'YOUR_SCRIPT_ID_HERE',
+      rootDir: './dist',
+    };
+    await writeFileAtomic(
+      '.clasp-dev.json',
+      JSON.stringify(placeholderConfig, null, 2)
+    );
+  }
+
+  if (!(await fs.pathExists('.clasp-prod.json'))) {
+    const placeholderConfig = {
+      scriptId: 'YOUR_SCRIPT_ID_HERE',
+      rootDir: './dist',
+    };
+    await writeFileAtomic(
+      '.clasp-prod.json',
+      JSON.stringify(placeholderConfig, null, 2)
+    );
+  }
 
   if (options.ui) {
     console.log();
