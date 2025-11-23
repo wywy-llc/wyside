@@ -23,7 +23,8 @@
     "rollup.config.mjs",
     "tsconfig.json",
     "template",
-    "template-ui"
+    "template-ui",
+    "mcp-server"
   ],
   "repository": "wywyjp/wyside",
   "main": "dist/src/index.js",
@@ -31,11 +32,14 @@
     "clean": "rimraf build",
     "lint": "npm run license && eslint --fix src/ test/",
     "lint:staged": "npm run license && lint-staged",
-    "build": "npm run clean && npm run lint && tsc && npm run copy-files",
+    "build": "npm run clean && npm run lint && tsc && npm run copy-files && (cd mcp-server && npm install && npm run build)",
     "license": "license-check-and-add add -f license-config.json",
     "test": "vitest run",
     "copy-files": "ncp .gitignore dist/.gitignore-target",
-    "prepare": "is-ci || husky install"
+    "prepare": "is-ci || husky install",
+    "test:e2e": "bash scripts/e2e-test.sh",
+    "test:e2e:init": "bash scripts/e2e-init.sh",
+    "test:e2e:clean": "rimraf test-projects"
   },
   "keywords": [
     "typescript",
@@ -88,7 +92,8 @@
     "rollup-plugin-license": "^3.0.1",
     "rollup-plugin-prettier": "^3.0.0",
     "rollup-plugin-typescript2": "^0.34.1",
-    "write-file-atomic": "^5.0.0"
+    "write-file-atomic": "^5.0.0",
+    "@modelcontextprotocol/sdk": "^1.0.1"
   },
   "peerDependencies": {
     "typescript": ">=4"
