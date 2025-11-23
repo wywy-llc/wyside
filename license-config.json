@@ -1,18 +1,5 @@
 {
-  "ignore": [
-    ".claspignore",
-    ".editorconfig",
-    ".eslintignore",
-    ".gitignore",
-    ".prettierignore",
-    "*.txt",
-    ".github",
-    "CONTRIBUTING",
-    "build",
-    "dist",
-    "src/ui/.angular",
-    "*.md"
-  ],
+  "ignore": [".*", "*.txt", "CONTRIBUTING", "build", "dist", "*.md", "*.yml"],
   "license": "license-header.txt",
   "licenseFormats": {
     "js|ts|mjs": {
