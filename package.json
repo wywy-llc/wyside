@@ -30,10 +30,9 @@
   "main": "dist/src/index.js",
   "scripts": {
     "clean": "rimraf build",
-    "lint": "npm run license && eslint --fix src/ test/",
-    "lint:staged": "npm run license && lint-staged",
+    "lint": "eslint --fix src/ test/",
+    "lint:staged": "lint-staged",
     "build": "npm run clean && npm run lint && tsc && npm run copy-files && (cd mcp-server && npm install && npm run build)",
-    "license": "license-check-and-add add -f license-config.json",
     "test": "vitest run",
     "copy-files": "ncp .gitignore dist/.gitignore-target",
     "prepare": "is-ci || husky install",

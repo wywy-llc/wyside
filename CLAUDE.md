@@ -22,6 +22,7 @@
 | **Lifecycle** | `npm install`        | Install dependencies (requires Node 22+)      |
 |               | `npm run build`      | Full build (Clean -> Lint -> Compile -> Copy) |
 |               | `npm run clean`      | Remove `build/` and `dist/` artifacts         |
+|               | `wyside mcp`         | Start MCP server for AI interaction           |
 | **QA**        | `npm test`           | Run Vitest suite                              |
 |               | `npx vitest --ui`    | Run tests in watch mode with UI               |
 |               | `npm run lint`       | ESLint + Prettier + License Header Check      |
@@ -38,7 +39,9 @@
   1. `handlePackageJson`: Updates scripts/deps.
   2. `handleConfigCopy/Merge`: Manages dotfiles.
   3. `handleTemplate`: Copies `template/` or `template-ui/`.
-  4. `handleClasp`: Auth & Project creation.
+  4. `handleMcpCommand`: Triggers MCP-based setup (if `--setup-gcp`).
+  5. `handleClasp`: Auth & Project creation.
+- **`mcp-setup.ts`**: MCP Server Launcher.
 - **`config.ts`**: Config Templates (`base`, `angular`, `svelte`). Defines specific deps/scripts.
 - **`clasp-helper.ts`**: Clasp Wrapper. Handles Login, Create, Clone, Link Extraction.
 - **`package-helper.ts`**: atomic `package.json` manipulation with dependency diffing (`compare.ts`).
@@ -47,6 +50,7 @@
 
 ```text
 wyside/
+├── mcp-server/        # MCP Server Implementation (Tools & Templates)
 ├── src/               # CLI Logic (Helpers, Config, App)
 ├── template[-ui]/     # Project Templates (Copied to user project)
 ├── dist/              # Build Output (ESM)
@@ -95,3 +99,15 @@ wyside/
 - **NO** direct `fs.writeFile`; use `write-file-atomic`.
 - **Template Immutability:** Templates are copied once; changes require a full `npm run build` and fresh `init` to test.
 - **Linting:** Do NOT lint `template/` directories (users customize these).
+
+## 7. MCP Integration (New)
+
+### Architecture
+
+The system includes a local MCP server (`mcp-server/`) that acts as an AI-driven infrastructure manager.
+
+- **Role:** Automates setup of GCP resources, Sheets API enabling, and Service Account creation.
+- **Tools:** `sync_local_secrets`, `scaffold_feature`, `setup_named_range`.
+- **Integration:**
+  - `wyside init --setup-gcp`: Triggers the setup flow.
+  - `wyside mcp`: Starts the server for IDE AI assistants.

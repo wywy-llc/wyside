@@ -1,0 +1,25 @@
+{
+  "name": "wyside-template",
+  "version": "0.0.1",
+  "description": "Wyside template project",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
+    "deploy": "clasp push"
+  },
+  "dependencies": {
+    "googleapis": "^140.0.0",
+    "google-auth-library": "^9.14.1",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/google-apps-script": "^1.0.83",
+    "@types/node": "^22.10.5",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8",
+    "@vitest/coverage-v8": "^2.1.8"
+  }
+}

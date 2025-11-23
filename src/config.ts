@@ -24,17 +24,22 @@ export const config: {
   filesMerge: Record<string, string>;
 } = {
   dependencies: [
+    '@eslint/eslintrc@^3.1.0',
     '@google/clasp@^2.5.0',
     '@rollup/plugin-commonjs@^28.0.9',
     '@rollup/plugin-node-resolve@^16.0.3',
     '@types/google-apps-script@^2.0.7',
     '@typescript-eslint/eslint-plugin@^8.46.2',
+    '@typescript-eslint/parser@^8.46.2',
     '@vitest/coverage-v8@^4.0.4',
     '@vitest/ui@^4.0.4',
+    'dotenv@^16.4.5',
     'eslint@^9.38.0',
     'eslint-config-prettier@^10.1.8',
     'eslint-plugin-prettier@^5.5.4',
     'factory.ts@^1.4.2',
+    'google-auth-library@^9.14.1',
+    'googleapis@^140.0.0',
     'gts@^6.0.2',
     'license-check-and-add@^4.0.5',
     'ncp@^2.0.0',
@@ -75,8 +80,6 @@ export const config: {
     'LICENSE': 'LICENSE',
     'license-config.json': 'license-config.json',
     'license-header.txt': 'license-header.txt',
-    'rollup.config.mjs': 'rollup.config.mjs',
-    'tsconfig.json': 'tsconfig.json',
   },
   filesMerge: {
     'dist/.gitignore-target': '.gitignore',

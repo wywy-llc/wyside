@@ -24,6 +24,8 @@ import writeFileAtomic from 'write-file-atomic';
 
 import { ClaspHelper } from './clasp-helper.js';
 import { config, configForAngular, configForSvelte } from './config.js';
+import { runMcpSetup } from './mcp-client.js';
+import { startMcpServer } from './mcp-setup.js';
 import { PackageHelper } from './package-helper.js';
 
 /**
@@ -36,6 +38,16 @@ export const app = null;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const DEBUG_ENABLED =
+  process.env.WYSIDE_DEBUG === '1' ||
+  process.env.WYSIDE_DEBUG?.toLowerCase() === 'true';
+const debugLog = DEBUG_ENABLED
+  ? (...args: unknown[]) => {
+      // eslint-disable-next-line no-console
+      console.log('[wyside:debug]', ...args);
+    }
+  : () => {};
+
 let CONFIG: typeof config;
 
 export interface Options {
@@ -44,6 +56,14 @@ export interface Options {
   title: string;
   ui: boolean;
   uiFramework?: 'angular' | 'svelte';
+  setupGcp?: boolean;
+}
+
+/**
+ * Handle MCP server startup.
+ */
+export function handleMcpCommand() {
+  startMcpServer();
 }
 
 /**
@@ -184,7 +204,7 @@ async function querySelect(
   options: Options
 ): Promise<string> {
   if (options.yes) {
-    return 'angular'; // Default to Angular if yes is passed, preserving legacy behavior
+    return 'none'; // Default to None if yes is passed
   }
   if (options.no) {
     return 'none';
@@ -312,23 +332,37 @@ async function handleTemplate(options: Options) {
   const items = await fs.readdir(templates);
 
   for (const item of items) {
-    const targetDirName = path.join(cwd, item);
+    const sourcePath = path.join(templates, item);
+    const targetPath = path.join(cwd, item);
+    const stats = await fs.stat(sourcePath);
 
-    // Create folder
-    fs.mkdirSync(targetDirName, { recursive: true });
+    if (stats.isDirectory()) {
+      // Create folder if not exists
+      await fs.ensureDir(targetPath);
 
-    // Only install the template if no ts files exist in target directory.
-    const files = fs.readdirSync(targetDirName);
-    const tsFiles = files.filter((file: string) =>
-      file.toLowerCase().endsWith('.ts')
-    );
+      // Only install the template if no ts files exist in target directory.
+      const files = await fs.readdir(targetPath);
+      const tsFiles = files.filter((file: string) =>
+        file.toLowerCase().endsWith('.ts')
+      );
 
-    // Copy files
-    if (tsFiles.length === 0) {
-      console.log(`${chalk.green('\u2714')}`, `Installing ${item} template...`);
-      await fs.copy(path.join(templates, item), targetDirName, {
-        overwrite: false,
-      });
+      if (tsFiles.length === 0) {
+        console.log(
+          `${chalk.green('\u2714')}`,
+          `Installing ${item} template...`
+        );
+        await fs.copy(sourcePath, targetPath, {
+          overwrite: false,
+        });
+      }
+    } else {
+      // It's a file
+      if (item === '.clasp.json') return;
+
+      if (!(await fs.pathExists(targetPath))) {
+        console.log(`${chalk.green('\u2714')}`, `Copying ${item}...`);
+        await fs.copy(sourcePath, targetPath);
+      }
     }
   }
 }
@@ -384,6 +418,7 @@ export async function init(
     title: string | undefined;
     yes: boolean | undefined;
     no: boolean | undefined;
+    setupGcp: boolean | undefined;
   } & Record<string, unknown>
 ) {
   const projectTitle =
@@ -398,6 +433,7 @@ export async function init(
     no: flags.no || false,
     title: projectTitle,
     ui: false,
+    setupGcp: flags.setupGcp || false,
   };
 
   const uiFramework = await querySelect(
@@ -435,6 +471,21 @@ export async function init(
 
   // Handle template
   await handleTemplate(options);
+
+  if (options.setupGcp) {
+    console.log(`${chalk.green('\u2714')}`, 'Running GCP setup via MCP...');
+    debugLog('Calling runMcpSetup() for GCP setup');
+    try {
+      await runMcpSetup({ title: options.title });
+    } catch (e) {
+      console.error(
+        chalk.red('GCP Setup failed:'),
+        e instanceof Error ? e.message : String(e)
+      );
+      // We don't exit process, allow init to continue (or fail if critical?)
+      // Assuming we want to continue with other steps if possible, or user can Ctrl+C
+    }
+  }
 
   // Handle clasp
   await handleClasp(options);

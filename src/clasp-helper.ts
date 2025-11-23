@@ -80,14 +80,12 @@ export class ClaspHelper {
   async clean(rootDir: string) {
     debugLog('clean clasp artifacts', { rootDir });
     // Remove all clasp project artifacts
-    await fs.rm(path.join(rootDir, '.clasp.json'), {
-      recursive: true,
-      force: true,
-    });
-    await fs.rm('appsscript.json', { force: true });
-    await fs.rm('.clasp.json', { force: true });
-    await fs.rm('.clasp-dev.json', { force: true });
-    await fs.rm('.clasp-prod.json', { force: true });
+    await fs.remove(path.join(rootDir, '.clasp.json'));
+    await fs.remove(path.join(rootDir, 'appsscript.json')); // Ensure dist/appsscript.json is gone
+    await fs.remove('appsscript.json');
+    await fs.remove('.clasp.json');
+    await fs.remove('.clasp-dev.json');
+    await fs.remove('.clasp-prod.json');
 
     // Make sure root dir exists
     await fs.mkdirs(rootDir);
@@ -128,6 +126,13 @@ export class ClaspHelper {
    * @returns {Promise<{sheetLink: string, scriptLink: string}>}
    */
   async create(title: string, scriptIdProd: string, rootDir: string) {
+    // Backup appsscript.json if it exists (e.g. from template)
+    let appsscriptBackup: string | null = null;
+    if (await fs.pathExists('appsscript.json')) {
+      appsscriptBackup = await fs.readFile('appsscript.json', 'utf8');
+      debugLog('Backed up existing appsscript.json');
+    }
+
     await this.clean(rootDir);
 
     debugLog('clasp create start', {
@@ -164,6 +169,10 @@ export class ClaspHelper {
 
     const failureOutput = `${res.stdout ?? ''}${res.stderr ?? ''}`.trim();
     if (res.status !== 0) {
+      // Restore backup if failed
+      if (appsscriptBackup) {
+        await writeFileAtomic('appsscript.json', appsscriptBackup);
+      }
       throw new Error(
         failureOutput || `clasp create failed with status ${res.status}`
       );
@@ -202,6 +211,12 @@ export class ClaspHelper {
     }
 
     await this.arrangeFiles(rootDir, scriptIdProd);
+
+    // Restore appsscript.json from backup (overwriting the one clasp created/moved)
+    if (appsscriptBackup) {
+      debugLog('Restoring appsscript.json from backup');
+      await writeFileAtomic('appsscript.json', appsscriptBackup);
+    }
 
     // Extract URLs from output
     const outputForLinks = combinedOutput;
