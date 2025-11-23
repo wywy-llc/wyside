@@ -1,3 +1,7 @@
 {
-  "*.ts": ["prettier --write --list-different", "eslint --fix"]
+  "!(mcp-server)/**/*.ts": ["prettier --write --list-different", "eslint --fix"],
+  "mcp-server/src/**/*.ts": [
+    "prettier --write --list-different",
+    "bash -c 'cd mcp-server && npx eslint --fix src/**/*.ts'"
+  ]
 }
