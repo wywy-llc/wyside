@@ -14,6 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ### Build and Development
+
 ```bash
 # Clean build artifacts
 npm run clean
@@ -29,6 +30,7 @@ npm run build
 ```
 
 ### Testing
+
 ```bash
 # Run all tests
 npm test
@@ -41,6 +43,7 @@ npx vitest test/clasp-helper.test.ts
 ```
 
 ### Development Workflow
+
 ```bash
 # 1. Make changes to src/ files
 # 2. Run tests
@@ -60,11 +63,13 @@ node dist/src/index.js init --help
 The codebase follows a **modular helper pattern** with clear separation of concerns:
 
 1. **index.ts** - CLI entry point
+
    - Uses `meow` for CLI argument parsing
    - Routes to `app.init()` for the `init` command
    - Handles flags: `--title`, `--yes`, `--no`, `--script-dev`, `--script-prod`
 
 2. **app.ts** - Main orchestration logic (~452 lines)
+
    - `init()` - Orchestrates project initialization workflow
    - Sequential handlers:
      - `handlePackageJson()` - Creates/updates package.json with scripts and dependencies
@@ -75,6 +80,7 @@ The codebase follows a **modular helper pattern** with clear separation of conce
    - Prompt functions: `query()`, `queryText()`, `querySelect()`
 
 3. **config.ts** - Configuration templates (~200 lines)
+
    - Three configuration variants:
      - `config` - Base (no UI framework)
      - `configForAngular` - Angular + Material setup
@@ -82,6 +88,7 @@ The codebase follows a **modular helper pattern** with clear separation of conce
    - Each config defines: dependencies, npm scripts, files to copy/merge
 
 4. **clasp-helper.ts** - Google Clasp integration (~325 lines)
+
    - `login()` - Google authentication
    - `create()` - Create new Apps Script project
    - `cloneAndPull()` - Clone existing Apps Script project
@@ -89,6 +96,7 @@ The codebase follows a **modular helper pattern** with clear separation of conce
    - Debug mode: Set `WYSIDE_DEBUG=1` environment variable for verbose logging
 
 5. **package-helper.ts** - package.json manipulation (~257 lines)
+
    - `load()` / `init()` - Load or create package.json
    - `installPackages()` - Runs npm install with dependency diffing
    - `updateScript()` - Updates npm scripts
@@ -115,18 +123,22 @@ app.init() (Orchestration)
 ## Testing Architecture
 
 ### Test Files (`test/`)
+
 - **compare.test.ts** - Tests SetComparison utility
 - **clasp-helper.test.ts** - Tests Google Clasp operations (with fs-extra mocks)
 - **package-helper.test.ts** - Tests npm package management
 - **config-svelte.test.ts** - Tests Svelte configuration
 
 ### Mocking Strategy
+
 - Uses Vitest's `vi.mock()` for external dependencies
 - Key mocks: `fs-extra`, `cross-spawn`
 - Test files include mocks in `__mocks__/` directory structure
 
 ### Test Coverage
+
 Tests focus on:
+
 - Core helper logic (package management, clasp integration)
 - Configuration generation
 - Set-based dependency comparison
@@ -135,6 +147,7 @@ Tests focus on:
 ## Build System
 
 ### TypeScript Compilation
+
 - **Config**: `tsconfig.json`
 - **Target**: ES2020
 - **Module**: ES2020 (ESM)
@@ -142,6 +155,7 @@ Tests focus on:
 - **Output**: `dist/` directory
 
 ### Rollup Build Pipeline
+
 ```
 src/index.ts
   ↓ (cleanup plugin - remove comments)
@@ -153,6 +167,7 @@ dist/src/index.js (ESM)
 ```
 
 ### Code Quality
+
 - **ESLint**: TypeScript-aware linting with Prettier integration
 - **Prettier**: Code formatting (enforced as ESLint error)
 - **License headers**: Automatically added to all source files
@@ -160,19 +175,23 @@ dist/src/index.js (ESM)
 ## Important Patterns and Conventions
 
 ### 1. Atomic File Operations
+
 - All file writes use `write-file-atomic` to prevent corruption
 - Critical for package.json updates during concurrent npm operations
 
 ### 2. Configuration Merging Strategy
+
 - **filesCopy**: Overwrite if different (e.g., `.eslintrc.json`)
 - **filesMerge**: Append missing lines only (e.g., `.gitignore`, `.claspignore`)
 - Preserves user customizations while adding framework requirements
 
 ### 3. Cross-Platform Process Management
+
 - Use `cross-spawn` instead of Node's native `spawn` for Windows compatibility
 - Both sync (`spawnSync`) and async (`spawn`) variants available
 
 ### 4. Set-Based Dependency Tracking
+
 - `compare.ts` provides efficient set operations to determine:
   - New packages to install
   - Already installed packages (skip)
@@ -180,11 +199,13 @@ dist/src/index.js (ESM)
 - Prevents redundant npm installs
 
 ### 5. Debug Logging
+
 - ClaspHelper supports conditional debug logging
 - Enable with: `WYSIDE_DEBUG=1 npx @wywyjp/wyside init`
 - Helpful for troubleshooting clasp authentication and project creation
 
 ### 6. Template Architecture
+
 - **template/** - Base template without UI (TypeScript only)
 - **template-ui/** - Template with UI support (Angular/Svelte)
 - Templates are copied during initialization, not modified
@@ -193,6 +214,7 @@ dist/src/index.js (ESM)
 ## Google Apps Script Integration
 
 ### Clasp Workflow
+
 1. **Authentication**: `clasp login` (interactive browser flow)
 2. **Project Creation**:
    - New project: `clasp create --type standalone`
@@ -200,6 +222,7 @@ dist/src/index.js (ESM)
 3. **Deployment**: `clasp push` (pushes `dist/` to Apps Script)
 
 ### Multi-Environment Support
+
 - Uses multiple `.clasp-*.json` files for different environments:
   - `.clasp-dev.json` - Development script
   - `.clasp-stg.json` - Staging script (optional)
@@ -207,6 +230,7 @@ dist/src/index.js (ESM)
 - Deploy scripts switch between configs before pushing
 
 ### Link Extraction
+
 - `extractScriptLink()` - Parses script URLs from clasp output
 - `extractSheetsLink()` - Parses Google Sheets Add-on URLs
 - Regex patterns account for various Google Apps Script project types
@@ -214,17 +238,21 @@ dist/src/index.js (ESM)
 ## UI Framework Support (template-ui)
 
 ### Angular Configuration
+
 - Creates Angular project via `ng new` during preinstall
 - Includes Angular Material setup
 - Build: `ng build` → `deploy-ui.mjs` (convert to GAS format)
 
 ### Svelte Configuration
+
 - Scaffolds Vite + Svelte project via `setup-svelte.mjs`
 - Includes TailwindCSS configuration
 - Build: `vite build` → `deploy-ui.mjs` (convert to GAS format)
 
 ### UI Deployment (`deploy-ui.mjs`)
+
 Transforms framework output to Google Apps Script-compatible HTML:
+
 - Converts `<script src="...">` to `<?!= include('...'); ?>`
 - Wraps JS in `<script type="module">`
 - Wraps CSS in `<style>` tags
@@ -233,6 +261,7 @@ Transforms framework output to Google Apps Script-compatible HTML:
 ## License Management
 
 All source files must include Apache 2.0 license header:
+
 ```bash
 # Check and add license headers
 npm run license
@@ -250,11 +279,11 @@ Configuration: `license-config.json` + `license-header.txt`
 
 ## Key Design Decisions
 
-| Decision | Rationale |
-|----------|-----------|
-| **CLI scaffolding tool** | Apps Script needs local dev setup; wyside initializes, doesn't run during development |
-| **Three config variants** | Supports no-UI, Angular, and Svelte without forcing all dependencies on every user |
-| **Atomic file writes** | Prevents package.json corruption during concurrent operations |
-| **Set-based diffing** | Efficient dependency comparison avoids redundant npm installs |
-| **ESM module format** | Modern JavaScript standard; compatible with Apps Script |
-| **Vitest over Jest** | Faster, native ESM support, better DX for TypeScript |
+| Decision                  | Rationale                                                                             |
+| ------------------------- | ------------------------------------------------------------------------------------- |
+| **CLI scaffolding tool**  | Apps Script needs local dev setup; wyside initializes, doesn't run during development |
+| **Three config variants** | Supports no-UI, Angular, and Svelte without forcing all dependencies on every user    |
+| **Atomic file writes**    | Prevents package.json corruption during concurrent operations                         |
+| **Set-based diffing**     | Efficient dependency comparison avoids redundant npm installs                         |
+| **ESM module format**     | Modern JavaScript standard; compatible with Apps Script                               |
+| **Vitest over Jest**      | Faster, native ESM support, better DX for TypeScript                                  |
