@@ -26,7 +26,6 @@ const DEBUG_ENABLED =
   process.env.WYSIDE_DEBUG?.toLowerCase() === 'true';
 const debugLog = DEBUG_ENABLED
   ? (...args: unknown[]) => {
-      // eslint-disable-next-line no-console
       console.log('[wyside:debug]', ...args);
     }
   : () => {};

@@ -285,7 +285,7 @@ describe('package-helper', () => {
             status: 1,
             stdout: 'stdout message',
             stderr: 'stderr message',
-          } as unknown as SpawnSyncReturns<string>)
+          }) as unknown as SpawnSyncReturns<string>
       );
       const pkgHelper = new PackageHelper({ dependencies: {} });
 
@@ -301,7 +301,7 @@ describe('package-helper', () => {
           ({
             status: 1,
             error: new Error('process failed'),
-          } as unknown as SpawnSyncReturns<string>)
+          }) as unknown as SpawnSyncReturns<string>
       );
       const pkgHelper = new PackageHelper({ dependencies: {} });
 
