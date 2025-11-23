@@ -6,3 +6,4 @@ build/
 *.tgz
 .vscode/
 .tmp*
+test-projects/
