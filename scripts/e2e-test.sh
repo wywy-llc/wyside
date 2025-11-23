@@ -32,13 +32,35 @@ if [ ! -f ".env" ]; then
   echo "⚠️  Warning: .env file not found"
   echo "   Please create .env with the following variables:"
   echo "   - GCP_PROJECT_ID"
-  echo "   - SPREADSHEET_ID"
+  echo "   - APP_SPREADSHEET_ID_1_DEV"
   echo "   - GOOGLE_APPLICATION_CREDENTIALS"
 fi
 
+# Deploy to GAS first to initialize the spreadsheet
+echo ""
+echo "📤 Step 1: Deploying to Google Apps Script..."
+npm run deploy
+
+# Check deploy results
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "❌ Deployment failed!"
+  exit 1
+fi
+
+echo ""
+echo "✅ Deployment successful!"
+echo ""
+echo "📋 Manual Step Required:"
+echo "  1. Open the Spreadsheet (URL from init output)"
+echo "  2. Reload the page to trigger onOpen() and initialize sheets"
+echo "  3. Check for 'Wyside Todo' menu"
+echo ""
+read -p "Press Enter after opening and initializing the spreadsheet..."
+
 # Run tests
 echo ""
-echo "🧪 Running integration tests..."
+echo "🧪 Step 2: Running integration tests..."
 npm test
 
 # Check test results
@@ -50,25 +72,8 @@ fi
 
 echo ""
 echo "✅ All tests passed!"
-
-# Deploy to GAS
 echo ""
-echo "📤 Deploying to Google Apps Script..."
-npm run deploy
-
-# Check deploy results
-if [ $? -eq 0 ]; then
-  echo ""
-  echo "✅ Deployment successful!"
-  echo ""
-  echo "📋 Next steps (Manual Verification):"
-  echo "  1. Open the Spreadsheet (check the init output for the link)"
-  echo "  2. Reload the page"
-  echo "  3. Check for 'Wyside Todo' menu"
-  echo "  4. Click 'Show Todos' to open the sidebar"
-  echo "  5. Verify you can add, list, and delete todos via the UI"
-else
-  echo ""
-  echo "❌ Deployment failed!"
-  exit 1
-fi
+echo "📋 Final Verification (Optional):"
+echo "  1. In the Spreadsheet, click 'Wyside Todo' > 'Show Todos'"
+echo "  2. Verify the sidebar shows todos"
+echo "  3. Try adding/toggling/deleting todos via the UI"

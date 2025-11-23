@@ -33,41 +33,46 @@ _Note: `--setup-gcp` triggers the MCP integration (currently a placeholder for a
 Ensure your `secrets/service-account.json` is in place and `.env` is configured with:
 
 - `GCP_PROJECT_ID`
-- `SPREADSHEET_ID`
+- `APP_SPREADSHEET_ID_1_DEV`
 - `GOOGLE_APPLICATION_CREDENTIALS`
 
-### 4. Run Local Integration Tests
+### 4. Deploy to GAS (First)
 
-Execute the test suite to verify logic against a real Spreadsheet.
+**Important**: Deploy BEFORE running tests to initialize the spreadsheet structure.
 
 ```bash
 npm install
+npm run deploy
+```
+
+### 5. Initialize Spreadsheet (Manual Step)
+
+After deployment:
+
+1. Open the Spreadsheet (use the link from the init output).
+2. **Reload the page** to trigger `onOpen()` function - this creates the "Todos" sheet.
+3. Verify "Wyside Todo" menu appears in the menu bar.
+
+_This step is required because the spreadsheet structure is initialized by GAS `onOpen()` function._
+
+### 6. Run Local Integration Tests
+
+Now execute the test suite to verify logic against the initialized Spreadsheet.
+
+```bash
 npm test
 ```
 
 Expect all tests to PASS.
 
-### 5. Deploy to GAS
+### 7. Verify GAS UI (Optional)
 
-Push the code to Google Apps Script.
+Additional manual verification in the browser:
 
-```bash
-npm run deploy
-```
+1. Click "Wyside Todo" > "Show Todos" to open the sidebar.
+2. Verify you can add, list, and delete todos via the UI.
 
-_Note: The `test:e2e` script automatically includes the deploy step._
-
-### 6. Verify GAS UI (Manual Step)
-
-This step requires manual verification in the browser:
-
-1. Open the Spreadsheet (use the link from the init output).
-2. Reload the page to load the GAS Add-on.
-3. Check for "Wyside Todo" menu in the menu bar.
-4. Click "Show Todos" to open the sidebar.
-5. Verify you can add, list, and delete todos via the UI.
-
-_Note: This step cannot be automated as it requires browser interaction with the Google Sheets UI._
+_Note: The `test:e2e` script follows this exact sequence: deploy → manual init → test._
 
 ## Troubleshooting
 

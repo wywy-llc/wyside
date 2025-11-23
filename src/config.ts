@@ -12,6 +12,7 @@ export const config: {
     '@google/clasp',
     '@rollup/plugin-commonjs',
     '@rollup/plugin-node-resolve',
+    '@rollup/plugin-replace',
     '@types/google-apps-script',
     '@typescript-eslint/eslint-plugin',
     '@typescript-eslint/parser',
