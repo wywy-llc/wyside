@@ -7,6 +7,36 @@ import dotenv from 'dotenv';
 // Load environment variables from .env
 dotenv.config();
 
+// Custom plugin to remove Node.js-only code blocks for GAS deployment
+function removeNodeCode() {
+  return {
+    name: 'remove-node-code',
+    transform(code, id) {
+      if (!id.endsWith('.ts') && !id.endsWith('.js')) return null;
+
+      // Remove Node.js-specific imports
+      let transformed = code
+        .replace(/import\s+{\s*google\s+as\s+googleApi\s*}\s+from\s+['"]googleapis['"];?/g, '')
+        .replace(/import\s+path\s+from\s+['"]path['"];?/g, '')
+        .replace(/import\s+{\s*GoogleAuth\s*}\s+from\s+['"]google-auth-library['"];?/g, '');
+
+      // Remove Node.js-only methods (private node* methods)
+      transformed = transformed.replace(
+        /private\s+async\s+node[A-Za-z]+\([^)]*\)\s*:\s*Promise<[^>]+>\s*{[^}]*}/gs,
+        ''
+      );
+
+      // Remove getNodeAuth method
+      transformed = transformed.replace(
+        /private\s+async\s+getNodeAuth\(\)\s*{[\s\S]*?^\s*}/gm,
+        ''
+      );
+
+      return { code: transformed, map: null };
+    },
+  };
+}
+
 // Determine environment (prod or dev)
 const isProduction = process.env.NODE_ENV === 'production';
 const suffix = isProduction ? 'PROD' : 'DEV';
@@ -26,15 +56,17 @@ const spreadsheetIdMapJson = JSON.stringify(spreadsheetIdMap);
 export default {
   input: 'src/main.ts',
   output: {
-    dir: 'dist',
-    format: 'esm',
+    file: 'dist/main.gs',
+    format: 'iife',
+    name: 'WysideApp',
   },
-  external: ['googleapis', 'path', 'google-auth-library'],
   plugins: [
     typescript({
       tsconfig: 'tsconfig.json',
       exclude: ['test/**/*', '**/*.test.ts'],
     }),
+    // Remove Node.js-only code for GAS deployment
+    removeNodeCode(),
     // Replace environment variables at build time (must run after TypeScript)
     replace({
       preventAssignment: true,

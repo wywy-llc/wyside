@@ -27,6 +27,26 @@ export class UniversalSheetsClient {
       : this.nodeBatchGet(spreadsheetId, ranges);
   }
 
+  async appendValues(
+    spreadsheetId: string,
+    range: string,
+    values: any[][]
+  ): Promise<any> {
+    return this.env === 'gas'
+      ? this.gasAppendValues(spreadsheetId, range, values)
+      : this.nodeAppendValues(spreadsheetId, range, values);
+  }
+
+  async updateValues(
+    spreadsheetId: string,
+    range: string,
+    values: any[][]
+  ): Promise<any> {
+    return this.env === 'gas'
+      ? this.gasUpdateValues(spreadsheetId, range, values)
+      : this.nodeUpdateValues(spreadsheetId, range, values);
+  }
+
   // === GAS Implementation ===
   private gasBatchUpdate(spreadsheetId: string, requests: any[]): any {
     const token = ScriptApp.getOAuthToken();
@@ -67,6 +87,64 @@ export class UniversalSheetsClient {
     return JSON.parse(response.getContentText());
   }
 
+  private gasAppendValues(
+    spreadsheetId: string,
+    range: string,
+    values: any[][]
+  ): any {
+    const token = ScriptApp.getOAuthToken();
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(
+      range
+    )}:append?valueInputOption=RAW`;
+
+    const response = UrlFetchApp.fetch(url, {
+      method: 'post',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      payload: JSON.stringify({ values }),
+      muteHttpExceptions: true,
+    });
+
+    const result = JSON.parse(response.getContentText());
+    if (response.getResponseCode() !== 200) {
+      throw new Error(
+        `Sheets API Error: ${result.error?.message || 'Unknown'}`
+      );
+    }
+    return result;
+  }
+
+  private gasUpdateValues(
+    spreadsheetId: string,
+    range: string,
+    values: any[][]
+  ): any {
+    const token = ScriptApp.getOAuthToken();
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(
+      range
+    )}?valueInputOption=RAW`;
+
+    const response = UrlFetchApp.fetch(url, {
+      method: 'put',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      payload: JSON.stringify({ values }),
+      muteHttpExceptions: true,
+    });
+
+    const result = JSON.parse(response.getContentText());
+    if (response.getResponseCode() !== 200) {
+      throw new Error(
+        `Sheets API Error: ${result.error?.message || 'Unknown'}`
+      );
+    }
+    return result;
+  }
+
   // === Node.js Implementation ===
   private async nodeBatchUpdate(
     spreadsheetId: string,
@@ -92,6 +170,40 @@ export class UniversalSheetsClient {
     const response = await sheets.spreadsheets.values.batchGet({
       spreadsheetId,
       ranges,
+    });
+    return response.data;
+  }
+
+  private async nodeAppendValues(
+    spreadsheetId: string,
+    range: string,
+    values: any[][]
+  ): Promise<any> {
+    const auth = await this.getNodeAuth();
+    const sheets = googleApi.sheets({ version: 'v4', auth });
+
+    const response = await sheets.spreadsheets.values.append({
+      spreadsheetId,
+      range,
+      valueInputOption: 'RAW',
+      requestBody: { values },
+    });
+    return response.data;
+  }
+
+  private async nodeUpdateValues(
+    spreadsheetId: string,
+    range: string,
+    values: any[][]
+  ): Promise<any> {
+    const auth = await this.getNodeAuth();
+    const sheets = googleApi.sheets({ version: 'v4', auth });
+
+    const response = await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range,
+      valueInputOption: 'RAW',
+      requestBody: { values },
     });
     return response.data;
   }

@@ -1,7 +1,7 @@
 import { UniversalSheetsClient } from '@/core/client';
 import { TodoUseCase } from '@/features/todo/TodoUseCase';
 import { UniversalTodoRepo } from '@/features/todo/UniversalTodoRepo';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 
@@ -31,10 +31,88 @@ const SHOULD_RUN_TESTS =
   isValidServiceAccount() &&
   !SPREADSHEET_ID.includes('_abc123');
 
+// Helper to check if a sheet exists
+async function sheetExists(
+  client: UniversalSheetsClient,
+  spreadsheetId: string,
+  sheetName: string
+): Promise<boolean> {
+  try {
+    await client.batchGet(spreadsheetId, [`${sheetName}!A1`]);
+    return true;
+  } catch (error: any) {
+    if (error?.message?.includes('Unable to parse range')) {
+      return false;
+    }
+    throw error;
+  }
+}
+
+// Helper to rename the first sheet to 'Todos' and add headers
+async function createSheet(
+  client: UniversalSheetsClient,
+  spreadsheetId: string,
+  sheetName: string
+): Promise<void> {
+  // Rename the first sheet (sheetId: 0) to 'Todos'
+  await client.batchUpdate(spreadsheetId, [
+    {
+      updateSheetProperties: {
+        properties: {
+          sheetId: 0,
+          title: sheetName,
+        },
+        fields: 'title',
+      },
+    },
+  ]);
+
+  // Add header row to the first sheet
+  await client.batchUpdate(spreadsheetId, [
+    {
+      updateCells: {
+        range: {
+          sheetId: 0,
+          startRowIndex: 0,
+          endRowIndex: 1,
+          startColumnIndex: 0,
+          endColumnIndex: 5,
+        },
+        rows: [
+          {
+            values: [
+              { userEnteredValue: { stringValue: 'ID' } },
+              { userEnteredValue: { stringValue: 'Title' } },
+              { userEnteredValue: { stringValue: 'Completed' } },
+              { userEnteredValue: { stringValue: 'Created' } },
+              { userEnteredValue: { stringValue: 'Updated' } },
+            ],
+          },
+        ],
+        fields: 'userEnteredValue',
+      },
+    },
+  ]);
+}
+
 describe('TodoUseCase Integration', () => {
   let client: UniversalSheetsClient;
   let repo: UniversalTodoRepo;
   let useCase: TodoUseCase;
+
+  beforeAll(async () => {
+    if (!SHOULD_RUN_TESTS) {
+      return;
+    }
+
+    // Ensure Todos sheet exists
+    client = new UniversalSheetsClient();
+    const exists = await sheetExists(client, SPREADSHEET_ID, 'Todos');
+    if (!exists) {
+      console.log('Creating Todos sheet...');
+      await createSheet(client, SPREADSHEET_ID, 'Todos');
+    }
+  });
 
   beforeEach(async () => {
     if (!SHOULD_RUN_TESTS) {

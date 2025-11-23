@@ -48,22 +48,8 @@ export class UniversalTodoRepo {
       todo.updatedAt,
     ];
 
-    // Use AppendCellsRequest via batchUpdate
-    const request = {
-      appendCells: {
-        sheetId: 0, // Assumes first sheet.
-        rows: [
-          {
-            values: rowValues.map(v => ({
-              userEnteredValue: { stringValue: v },
-            })),
-          },
-        ],
-        fields: '*',
-      },
-    };
-
-    await this.client.batchUpdate(this.spreadsheetId, [request]);
+    // Use values.append API for more reliable row appending
+    await this.client.appendValues(this.spreadsheetId, TODO_RANGE, [rowValues]);
     return todo;
   }
 
@@ -73,9 +59,8 @@ export class UniversalTodoRepo {
     const index = todos.findIndex(t => t.id === id);
     if (index === -1) throw new Error(`Todo ${id} not found`);
 
-    // Row index in sheet = index + 1 (0-based API index, considering header is at 0)
-    // If A2 is first data, header is A1. API index 0 is Row 1. API index 1 is Row 2.
-    const rowIndex = index + 1;
+    // Row number in Sheets notation (A2 is row 2)
+    const rowNumber = index + 2;
 
     const current = todos[index];
     const updated = {
@@ -92,25 +77,9 @@ export class UniversalTodoRepo {
       updated.updatedAt,
     ];
 
-    const request = {
-      updateCells: {
-        range: {
-          sheetId: 0,
-          startRowIndex: rowIndex,
-          endRowIndex: rowIndex + 1,
-          startColumnIndex: 0,
-          endColumnIndex: 5,
-        },
-        rows: [
-          {
-            values: values.map(v => ({ userEnteredValue: { stringValue: v } })),
-          },
-        ],
-        fields: '*',
-      },
-    };
-
-    await this.client.batchUpdate(this.spreadsheetId, [request]);
+    // Use values.update API with explicit range
+    const range = `Todos!A${rowNumber}:E${rowNumber}`;
+    await this.client.updateValues(this.spreadsheetId, range, [values]);
   }
 
   async deleteTodo(id: string): Promise<void> {

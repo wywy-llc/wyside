@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
+    "target": "ES2019",
     "module": "ES2022",
     "moduleResolution": "node",
     "outDir": "./dist",
@@ -8,6 +8,7 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "useDefineForClassFields": false,
     "types": ["google-apps-script", "vitest/globals", "node"],
     "baseUrl": ".",
     "paths": {
