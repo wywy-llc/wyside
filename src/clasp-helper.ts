@@ -21,6 +21,17 @@ import os from 'os';
 import path from 'path';
 import writeFileAtomic from 'write-file-atomic';
 
+const debugLog = (...args: unknown[]) => {
+  const enabled =
+    process.env.WYSIDE_DEBUG === '1' ||
+    process.env.WYSIDE_DEBUG?.toLowerCase() === 'true';
+
+  if (enabled) {
+    // eslint-disable-next-line no-console
+    console.log('[wyside:debug]', ...args);
+  }
+};
+
 /**
  * Helper class to wrap clasp utilities.
  */
@@ -40,6 +51,8 @@ export class ClaspHelper {
   async login() {
     const loggedIn = await this.isLoggedIn();
 
+    debugLog('clasp login check', { loggedIn });
+
     if (!loggedIn) {
       spawn.sync('npx', ['clasp', 'login'], { stdio: 'inherit' });
     }
@@ -51,10 +64,13 @@ export class ClaspHelper {
    * @returns {Promise<boolean>}
    */
   async isConfigured() {
-    return (
+    const configured =
       (await fs.exists('.clasp-dev.json')) ||
-      (await fs.exists(path.join('dist', '.clasp.json')))
-    );
+      (await fs.exists(path.join('dist', '.clasp.json')));
+
+    debugLog('clasp configured check', { configured });
+
+    return configured;
   }
 
   /**
@@ -63,6 +79,7 @@ export class ClaspHelper {
    * @param {string} rootDir
    */
   async clean(rootDir: string) {
+    debugLog('clean clasp artifacts', { rootDir });
     // Remove all clasp project artifacts
     await fs.rm(path.join(rootDir, '.clasp.json'), {
       recursive: true,
@@ -84,7 +101,7 @@ export class ClaspHelper {
    */
   extractSheetsLink(output: string) {
     const sheetsLink = output.match(
-      /Created new (?:document|spreadsheet|sheet)s?:\s*([^\s,]+)/i
+      /Created new (?:google\s+)?(?:document|spreadsheet|sheet)s?(?: file)?:\s*([^\s,]+)/i
     );
 
     return sheetsLink?.length ? sheetsLink[1] : 'Not found';
@@ -97,7 +114,7 @@ export class ClaspHelper {
    */
   extractScriptLink(output: string) {
     const scriptLink = output.match(
-      /Created new (?:script|project):\s*([^\s,]+)/i
+      /Created new (?:google\s+)?(?:apps\s+script\s+project|script|project):\s*([^\s,]+)/i
     );
 
     return scriptLink?.length ? scriptLink[1] : 'Not found';
@@ -114,6 +131,12 @@ export class ClaspHelper {
   async create(title: string, scriptIdProd: string, rootDir: string) {
     await this.clean(rootDir);
 
+    debugLog('clasp create start', {
+      title,
+      rootDir,
+      scriptIdProd: scriptIdProd ? '(provided)' : '(none)',
+    });
+
     const res = spawn.sync(
       'npx',
       [
@@ -128,6 +151,13 @@ export class ClaspHelper {
       ],
       { encoding: 'utf-8' }
     );
+
+    debugLog('clasp create result', {
+      status: res.status,
+      error: res.error?.message,
+      stdout: res.stdout,
+      stderr: res.stderr,
+    });
 
     if (res.error) {
       throw res.error;
@@ -147,6 +177,14 @@ export class ClaspHelper {
     const claspExistsRoot = await fs.pathExists(claspPathRoot);
     const appsscriptExists = await fs.pathExists(appsscriptPath);
     const claspExists = claspExistsDist || claspExistsRoot;
+
+    debugLog('clasp create artifacts', {
+      claspExistsDist,
+      claspExistsRoot,
+      appsscriptExists,
+      output,
+    });
+
     if (!claspExists || !appsscriptExists) {
       throw new Error(
         `clasp create-script did not produce ${
@@ -158,8 +196,9 @@ export class ClaspHelper {
     }
 
     // Copy clasp config to project root so arrangeFiles can move it.
-    const claspSource = claspExistsDist ? claspPathDist : claspPathRoot;
-    await fs.copyFile(claspSource, '.clasp.json');
+    if (claspExistsDist) {
+      await fs.copyFile(claspPathDist, claspPathRoot);
+    }
 
     await this.arrangeFiles(rootDir, scriptIdProd);
 
@@ -182,8 +221,18 @@ export class ClaspHelper {
     const rootClaspPath = '.clasp.json';
     const distClaspPath = path.join(rootDir, '.clasp.json');
     const rootExists = await fs.pathExists(rootClaspPath);
+
+    debugLog('arrangeFiles start', {
+      rootDir,
+      rootExists,
+      distClaspPath,
+      scriptIdProd: scriptIdProd ? '(provided)' : '(none)',
+    });
     if (!rootExists) {
       const distExists = await fs.pathExists(distClaspPath);
+
+      debugLog('arrangeFiles missing root .clasp.json', { distExists });
+
       if (distExists) {
         await fs.copyFile(distClaspPath, rootClaspPath);
       } else {
@@ -195,6 +244,12 @@ export class ClaspHelper {
 
     const appsscriptPath = path.join(rootDir, 'appsscript.json');
     const appsscriptExists = await fs.pathExists(appsscriptPath);
+
+    debugLog('arrangeFiles appsscript check', {
+      appsscriptPath,
+      appsscriptExists,
+    });
+
     if (!appsscriptExists) {
       throw new Error(
         `Missing appsscript.json in ${rootDir}. clasp create or pull may have failed.`
@@ -223,6 +278,11 @@ export class ClaspHelper {
     scriptIdProd: string,
     rootDir: string
   ) {
+    debugLog('cloneAndPull start', {
+      scriptIdDev: scriptIdDev ? '(provided)' : '(missing)',
+      scriptIdProd: scriptIdProd ? '(provided)' : '(missing)',
+      rootDir,
+    });
     await this.clean(rootDir);
 
     // Write .clasp.json
@@ -250,6 +310,11 @@ export class ClaspHelper {
     rootDir: string,
     filename: string | undefined = '.clasp.json'
   ) {
+    debugLog('writeConfig', {
+      filename,
+      rootDir,
+      scriptId: scriptId ? '(provided)' : '(missing)',
+    });
     const claspConfig = {
       scriptId: scriptId,
       rootDir: rootDir,

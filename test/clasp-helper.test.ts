@@ -20,7 +20,7 @@ import { ClaspHelper } from '../src/clasp-helper';
 
 vi.mock('fs-extra', () => {
   const exists = vi.fn();
-  const pathExists = vi.fn();
+  const pathExists = vi.fn<() => Promise<boolean>>();
   const rm = vi.fn();
   const mkdirs = vi.fn();
   const move = vi.fn();
@@ -40,7 +40,9 @@ vi.mock('fs-extra', () => {
 
 describe('clasp-helper', () => {
   const claspHelper = new ClaspHelper();
-  const pathExistsMock = vi.mocked(fs.pathExists);
+  const pathExistsMock = vi.mocked(
+    fs.pathExists as unknown as (path: string) => Promise<boolean>
+  );
 
   afterEach(() => {
     vi.clearAllMocks();
@@ -195,6 +197,15 @@ describe('clasp-helper', () => {
 
       expect(res).toEqual('https://docs.google.com/spreadsheets/abc123/edit');
     });
+
+    it('extracts sheets link when clasp reports Google Sheet', () => {
+      const output =
+        'Created new Google Sheet: https://docs.google.com/spreadsheets/abc123/edit';
+
+      const res = claspHelper.extractSheetsLink(output);
+
+      expect(res).toEqual('https://docs.google.com/spreadsheets/abc123/edit');
+    });
   });
 
   describe('extractScriptLink', () => {
@@ -210,6 +221,15 @@ describe('clasp-helper', () => {
       const res = claspHelper.extractScriptLink(output);
 
       expect(res).toEqual('https://drive.google.com/abc123');
+    });
+
+    it('extracts script link when clasp reports Google Apps Script project', () => {
+      const output =
+        'Created new Google Apps Script project: https://script.google.com/abc123';
+
+      const res = claspHelper.extractScriptLink(output);
+
+      expect(res).toEqual('https://script.google.com/abc123');
     });
   });
 
@@ -254,6 +274,25 @@ describe('clasp-helper', () => {
       expect(fsCopyFileSpy).toHaveBeenCalledWith(
         'rootDir/.clasp.json',
         '.clasp.json'
+      );
+      expect(fsMoveSpy).toHaveBeenCalledWith('.clasp.json', '.clasp-dev.json', {
+        overwrite: true,
+      });
+    });
+
+    it('skips copying when .clasp.json already exists in root', async () => {
+      const fsMoveSpy = vi.mocked(fs.move).mockImplementation(async () => {});
+      const fsCopyFileSpy = vi.mocked(fs.copyFile);
+      pathExistsMock
+        .mockResolvedValueOnce(true) // root .clasp.json exists
+        .mockResolvedValue(true); // appsscript move path check
+
+      await claspHelper.arrangeFiles('rootDir');
+
+      expect(fsCopyFileSpy).toHaveBeenCalledTimes(1);
+      expect(fsCopyFileSpy).toHaveBeenCalledWith(
+        '.clasp-dev.json',
+        '.clasp-prod.json'
       );
       expect(fsMoveSpy).toHaveBeenCalledWith('.clasp.json', '.clasp-dev.json', {
         overwrite: true,
