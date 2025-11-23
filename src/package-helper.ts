@@ -174,11 +174,20 @@ export class PackageHelper {
 
     const executionResult = spawn.sync(
       'npm',
-      ['install', '--silent'].concat(packagesToInstall),
+      ['install', '--no-progress'].concat(packagesToInstall),
       { encoding: 'utf-8' }
     );
-    if (executionResult.stderr) {
-      throw new Error(executionResult.stderr);
+    const stderr = executionResult.stderr ?? '';
+    const stdout = executionResult.stdout ?? '';
+    if (executionResult.error) {
+      throw executionResult.error;
+    }
+    if (executionResult.status !== 0) {
+      const message =
+        stderr ||
+        stdout ||
+        `npm install failed with status ${executionResult.status}`;
+      throw new Error(message);
     }
 
     // sync with new saved dependencies after install
