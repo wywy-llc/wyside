@@ -1,68 +1,63 @@
 # wyside
 
-- **Note**: This is a fork of [@google/aside](https://github.com/google/aside).
-- The original project is created by Google but is not officially supported.
+> **Note**:
+>
+> - This project is under active development, and there may be many imperfections. Your understanding is appreciated.
+> - This is a fork of [@google/aside](https://github.com/google/aside), evolved to support AI-native workflows and unified architectures.
+
+[![npm version](https://badge.fury.io/js/%40wywyjp%2Fwyside.svg)](https://badge.fury.io/js/%40wywyjp%2Fwyside)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 ## Overview
 
-wyside supports modern, robust and scalable Apps Script development by providing a framework for a local coding environment capable of formatting, linting, testing and much more.
+**wyside** is a next-generation CLI and scaffolding tool for Google Apps Script (GAS) development. It transforms the traditional GAS experience into a modern, professional software engineering workflow.
 
-Here are the main features:
+By enforcing a **"Test-Separated Hybrid" architecture**, wyside enables you to write code that runs identically on both your local Node.js environment and the GAS runtime. This allows for true TDD (Test-Driven Development), local execution, and robust CI/CD pipelines without the typical limitations of GAS.
 
-- **TypeScript**
+## Key Features
 
-  Write your code in TypeScript. It will be automatically compiled and bundled when deploying
+- **🚀 Unified Hybrid Runtime**
+  Write business logic that runs on both Node.js and GAS. Use standard `googleapis` REST APIs instead of the proprietary GAS SDK for data operations, enabling 100% local testability.
 
-- **Formatting / Linting**
+- **🤖 AI-Native Infrastructure**
+  Includes a built-in **MCP (Model Context Protocol) Server**. AI assistants (like Claude or Gemini) can use this to autonomously provision GCP projects, enable APIs (Sheets, Drive, Gmail), and manage Service Accounts for you.
 
-  Leverage the power of ESLint and Prettier to enforce a unique coding style amongst collaborators
+- **🛠️ Modern Toolchain**
+  Pre-configured with **TypeScript**, **ESLint**, **Prettier**, and **Vitest**. Forget about configuration hell and start coding immediately.
 
-- **Testing**
+- **📦 Automatic Global Exposure**
+  Write standard ESM `export` functions. The build system automatically generates the necessary GAS global wrappers (`function onOpen() { ... }`), keeping your code clean and modular.
 
-  Use Vitest to test your code before deploying
+- **🔄 Multi-Environment Support**
+  Seamlessly switch between `dev` and `prod` environments with dedicated deployment configurations.
 
-- **Multiple Environments**
+## Architecture: The "Test-Separated Hybrid" Approach
 
-  Seemlessly switch between `dev` and `prod` environments to push your code to
+To achieve true local development, wyside mandates a strict architectural pattern:
 
-- **Unified Architecture (AI Native)**
-
-  Generate "Test-Separated Hybrid" code that runs on both GAS and Node.js using the built-in MCP server.
-
-### GAS/Node 共通のグローバル公開ルール
-
-Apps Script の UI/トリガー関数を公開するときは、環境ごとに `global` の有無が異なるため、次のパターンで安全に束縛してください。
-
-```ts
-const globalScope =
-  typeof globalThis !== 'undefined'
-    ? globalThis
-    : typeof global !== 'undefined'
-      ? global
-      : {};
-
-globalScope.onOpen = onOpen;
-```
-
-この形にしておくと、Node でも GAS でも `ReferenceError` を起こさずメニュー作成などが機能します。
+1. **No GAS SDK in Business Logic**: Avoid `ScriptApp` or `SpreadsheetApp` in your core logic.
+2. **Universal Clients**: Use the provided "Universal Client" patterns that detect the runtime:
+   - **On Node.js (Local/CI)**: Uses `googleapis` with a Service Account.
+   - **On GAS (Production)**: Uses `UrlFetchApp` and GAS OAuth tokens.
+3. **Result**: Your code is environment-agnostic. You can write fast, reliable unit tests in Vitest that run locally, ensuring high quality before deployment.
 
 ## Quick Start
 
-The simplest way to get started with a fully configured environment (including GCP setup) is:
+you need to complete the following prerequisites (including creating a Service Account and getting its key):
+
+1. Verifying authentication (`gcloud`).
+2. Selecting/Creating a Google Cloud Project.
+3. Enabling necessary APIs (Sheets, Drive, Gmail).
+4. Creating a Service Account & downloading keys (`secrets/service-account.json`).
+5. Configuring environment variables: Create a `template/.env` file based on `template/.env.example` and configure the necessary environment variables, especially `GOOGLE_APPLICATION_CREDENTIALS` to point to the downloaded service account key, and also Spreadsheet IDs and GCP project ID.
+
+Once these prerequisites are completed, execute the following command:
 
 ```bash
 npx @wywyjp/wyside init --setup-gcp
 ```
 
-The `--setup-gcp` flag triggers the automated setup process which handles:
-
-1. Verify `gcloud auth login`
-2. Select/create GCP project
-3. Enable `sheets.googleapis.com`, `drive.googleapis.com`, `gmail.googleapis.com`
-4. Create Service Account & download key
-5. Place `secrets/service-account.json`
-6. Create or configure Spreadsheet sharing
-7. Generate `.env` file
+### Debugging Initialization
 
 To inspect initialization issues with verbose debug logs:
 
@@ -72,48 +67,26 @@ WYSIDE_DEBUG=1 npx @wywyjp/wyside init --setup-gcp
 
 ## What it does
 
-After running the `init` command above, wyside will go ahead and do the following:
+After running the `init` command, wyside orchestrates the following:
 
-- **Add configuration files**
+- **Scaffolds Configuration**: Sets up `tsconfig.json`, `eslint.config.js`, `vitest.config.ts`, and `.prettierrc`.
+- **Installs Dependencies**: Fetches all necessary packages for building, linting, and testing.
+- **Configures Scripts**: Adds convenience commands like `npm run build`, `npm run test`, and `npm run deploy` to your `package.json`.
+- **Sets up Clasp**: Initializes [clasp](https://github.com/google/clasp) for code synchronization with Google Drive.
 
-  E.g. for ESLint, Prettier, Vitest, ...
+## CLI Options
 
-- **Set convenience scripts in package.json**
-
-  Those scripts include: `lint`, `build` and `deploy`, among others
-
-- **Install necessary dependencies**
-
-  Everything required for formatting, linting, testing, etc. will be installed automatically
-
-- **Set up clasp**
-
-  wyside is using [clasp](https://github.com/google/clasp) to pull and push code from and to Apps Script
-
-## Options
-
-You can provide the `init` command with some convenience options:
-
-- `--yes` / `-y`
-
-  Answer 'yes' to all prompts
-
-- `--no` / `-n`
-
-  Answer 'no' to all prompts
-
-- `--title`/ `-t`
-
-  Set project title without being asked for it
-
-- `--script-dev`
-
-  Set Script ID for dev environment without being asked for it
-
-- `--script-prod`
-
-  Set Script ID for production environment without being asked for it
+You can customize the initialization with these flags:
 
 - `--setup-gcp`
-
   Run the automated Google Cloud Platform setup (APIs, Service Account, Secrets) using the embedded MCP server.
+- `--yes` / `-y`
+  Answer 'yes' to all prompts (non-interactive mode).
+- `--no` / `-n`
+  Answer 'no' to all prompts.
+- `--title` / `-t` "string"
+  Set the project title explicitly.
+- `--script-dev` "string"
+  Set the Apps Script ID for the `dev` environment.
+- `--script-prod` "string"
+  Set the Apps Script ID for the `production` environment.
