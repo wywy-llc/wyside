@@ -26,6 +26,36 @@
 | `npm run dev`   | Watch mode for development      |
 | `npm start`     | Run the compiled server (stdio) |
 
+### Tool Testing
+
+ツールを修正した際は以下の手順でテストを実行:
+
+```bash
+# 1. ビルド
+npm run build
+
+# 2. ツール単体テスト（手動検証）
+npm run test:tool <tool-name> [args...]
+
+# 例: sync_secrets_from_gcp_to_local
+npm run test:tool sync_secrets_from_gcp_to_local my-project-123
+
+# 例: scaffold_feature
+npm run test:tool scaffold_feature Todo "create,read,update,delete"
+```
+
+**テスト対象ツール:**
+- `sync_secrets_from_gcp_to_local <projectId> [spreadsheetId]`
+- `scaffold_feature <featureName> <operation1,operation2,...>`
+- `setup_named_range <spreadsheetId> <rangeName> <range>`
+- `drive_create_folder <folderName> [parentId]`
+- `gmail_send_email <to> <subject> <body>`
+
+**検証ポイント:**
+1. ✅ ビルドエラーがないこと
+2. ✅ ツールが正常に実行され、期待する結果を返すこと
+3. ✅ 生成されたファイル（scaffoldの場合）が正しいフォーマットであること
+
 ## 4. Architecture
 
 - **Entry Point:** `src/index.ts`
