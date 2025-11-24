@@ -22,17 +22,38 @@
 
 ## 2. Operational Matrix (CLI)
 
-| Category      | Command              | Description                                   |
-| :------------ | :------------------- | :-------------------------------------------- |
-| **Lifecycle** | `npm install`        | Install dependencies (requires Node 22+)      |
-|               | `npm run build`      | Full build (Clean -> Lint -> Compile -> Copy) |
-|               | `npm run clean`      | Remove `build/` and `dist/` artifacts         |
-|               | `wyside mcp`         | Start MCP server for AI interaction           |
-| **QA**        | `npm test`           | Run Vitest suite                              |
-|               | `npx vitest --ui`    | Run tests in watch mode with UI               |
-| **Deploy**    | `clasp login`        | Authenticate with Google                      |
-|               | `clasp push`         | Deploy `dist/` to GAS (Handled via scripts)   |
-| **Debug**     | `WYSIDE_DEBUG=1 ...` | Enable verbose logging for Clasp/Init         |
+| Category      | Command                 | Description                                   |
+| :------------ | :---------------------- | :-------------------------------------------- |
+| **Lifecycle** | `npm install`           | Install dependencies (requires Node 22+)      |
+|               | `npm run build`         | Full build (Clean -> Lint -> Compile -> Copy) |
+|               | `npm run clean`         | Remove `build/` and `dist/` artifacts         |
+|               | `wyside mcp`            | Start MCP server for AI interaction           |
+| **QA**        | `npm test`              | Run Vitest suite                              |
+|               | `npm run test:e2e:init` | Generate test project from template           |
+|               | `npm run test:e2e`      | Run E2E tests on generated project            |
+|               | `npx vitest --ui`       | Run tests in watch mode with UI               |
+| **Deploy**    | `clasp login`           | Authenticate with Google                      |
+|               | `clasp push`            | Deploy `dist/` to GAS (Handled via scripts)   |
+| **Debug**     | `WYSIDE_DEBUG=1 ...`    | Enable verbose logging for Clasp/Init         |
+
+### Development Test Cycle
+
+**Flow:** Template修正 → E2E検証 → GAS動作確認
+
+```bash
+# 1. Generate test project from template
+npm run test:e2e:init
+# ↓ Error? → Check src/index.ts init handlers
+
+# 2. Run E2E tests
+npm run test:e2e
+# ↓ Error? → Check template/src/ code or dependencies
+
+# 3. Manual GAS verification
+cd test-projects/todo-app
+npm run build && npm run deploy
+# ↓ Error? → Fix template, return to step 1
+```
 
 ## 3. Architecture & Data Flow
 
@@ -98,6 +119,31 @@ wyside/
 - **File Ops:** ALWAYS use `write-file-atomic` to prevent corruption.
 - **Process:** ALWAYS use `cross-spawn` for Windows compatibility.
 
+### GAS Global Function Exposure (Export-Driven)
+
+**Pattern:** Functions are auto-exposed to GAS global scope via `export` keyword.
+
+```typescript
+// template/src/main.ts
+export function onOpen() { ... }        // ✅ Auto-exposed to GAS
+export function onInstall() { ... }     // ✅ Auto-exposed to GAS
+export function doGet(e) { ... }        // ✅ Auto-exposed to GAS
+
+function internalHelper() { ... }       // ❌ Not exposed (no export)
+```
+
+**Build Process:** Rollup plugin (`exposeGasFunctions`) automatically:
+
+1. Scans `main.ts` for `export function xxx()`
+2. Generates wrapper: `function xxx() { return WysideApp.xxx.apply(this, arguments); }`
+3. Logs detected functions at build time
+
+**Benefits:**
+
+- ✅ Zero manual configuration (no function list maintenance)
+- ✅ Type-safe (TypeScript export syntax)
+- ✅ Auto-validation (build fails if exports broken)
+
 ### Testing Strategy
 
 - **Tool:** Vitest.
@@ -110,6 +156,36 @@ wyside/
 - **Gates:** Must pass `npm run lint` and `npm test`.
 
 ## 5. Workflow Specifics
+
+### Rollup Build System
+
+**Architecture:** `template/rollup.config.mjs` orchestrates 3 custom plugins:
+
+1. **`removeNodeCode()`**: Strips Node.js imports (`googleapis`, `dotenv`, etc.) for GAS compatibility
+2. **`exposeGasFunctions()`**: Auto-detects `export function` and generates GAS global wrappers
+3. **`copyHtmlFiles()`**: Emits HTML assets (`index.html`, `email-dialog.html`) to `dist/`
+
+**Build Flow:**
+
+```
+src/main.ts → TypeScript → Babel (ES2019) → removeNodeCode → exposeGasFunctions → Prettier → copyHtmlFiles → dist/
+```
+
+**Output Verification:**
+
+```bash
+npm run build
+# Expected logs:
+# ✅ Auto-detected 11 exported functions: onOpen, doGet, ...
+# 🌐 Processing HTML files...
+# 📄 2 HTML file(s) will be written to dist/
+```
+
+**dist/ Structure:**
+
+- `main.gs` (bundled GAS script with global functions)
+- `index.html`, `email-dialog.html` (UI assets)
+- `appsscript.json` (GAS manifest)
 
 ### UI Frameworks
 
@@ -138,8 +214,14 @@ wyside/
    - **NO** direct `fs.writeFile`; use `write-file-atomic`.
 
 3. **Global Exposure (GAS UI/Triggers):**
-   - Use a safe global binding: `const globalScope = typeof globalThis !== 'undefined' ? globalThis : typeof global !== 'undefined' ? global : {};`
-   - Export GAS entrypoints to `globalScope.*` (never bare `global.*`) to avoid `ReferenceError` in GAS runtime and keep Node/GAS parity.
+   - **ALWAYS use `export` keyword** for GAS-visible functions (`onOpen`, `doGet`, etc.)
+   - Rollup auto-generates global wrappers (see §4 "GAS Global Function Exposure")
+   - ESLint suppression required for `Function('return this')` globalThis polyfill:
+
+     ```typescript
+     // eslint-disable-next-line @typescript-eslint/no-implied-eval
+     const getGlobalScope = new Function('return this');
+     ```
 
 4. **Template Management:**
    - **Template Immutability:** Templates are copied once; changes require a full `npm run build` and fresh `init` to test.
