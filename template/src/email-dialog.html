@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
   <head>
     <base target="_top" />
@@ -30,6 +30,7 @@
       .button-group {
         margin-top: 20px;
         text-align: right;
+        position: relative;
       }
       button {
         padding: 8px 16px;
@@ -37,19 +38,24 @@
         border: none;
         border-radius: 4px;
         cursor: pointer;
+        position: relative;
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
       }
       .btn-primary {
         background-color: #4285f4;
         color: white;
       }
-      .btn-primary:hover {
+      .btn-primary:hover:not(:disabled) {
         background-color: #357ae8;
       }
       .btn-secondary {
         background-color: #f1f1f1;
         color: #333;
       }
-      .btn-secondary:hover {
+      .btn-secondary:hover:not(:disabled) {
         background-color: #e0e0e0;
       }
       .message {
@@ -67,6 +73,29 @@
         background-color: #f8d7da;
         color: #721c24;
         border: 1px solid #f5c6cb;
+      }
+      /* Spinner styles */
+      .spinner {
+        display: none;
+        width: 16px;
+        height: 16px;
+        border: 2px solid #ffffff;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin-left: 8px;
+        vertical-align: middle;
+      }
+      .btn-primary.loading .spinner {
+        display: inline-block;
+      }
+      .btn-primary.loading .btn-text {
+        opacity: 0.7;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
       }
     </style>
   </head>
@@ -88,7 +117,10 @@
         <button class="btn-secondary" onclick="google.script.host.close()">
           Cancel
         </button>
-        <button class="btn-primary" onclick="sendEmail()">Send</button>
+        <button class="btn-primary" id="sendBtn" onclick="sendEmail()">
+          <span class="btn-text">Send</span>
+          <span class="spinner"></span>
+        </button>
       </div>
     </div>
 
@@ -97,6 +129,7 @@
         const emailInput = document.getElementById('email');
         const email = emailInput.value.trim();
         const messageDiv = document.getElementById('message');
+        const sendBtn = document.getElementById('sendBtn');
 
         // バリデーション
         if (!email) {
@@ -110,15 +143,20 @@
           return;
         }
 
-        // ボタン無効化
+        // Hide previous messages
+        messageDiv.style.display = 'none';
+
+        // ボタン無効化 + スピナー表示
         const buttons = document.querySelectorAll('button');
         buttons.forEach(btn => {
           btn.disabled = true;
         });
+        sendBtn.classList.add('loading');
 
         // サーバー側関数を呼び出し
         google.script.run
           .withSuccessHandler(response => {
+            sendBtn.classList.remove('loading');
             if (response.success) {
               showMessage(response.message, 'success');
               setTimeout(() => {
@@ -132,6 +170,7 @@
             }
           })
           .withFailureHandler(error => {
+            sendBtn.classList.remove('loading');
             showMessage('Error: ' + error.message, 'error');
             buttons.forEach(btn => {
               btn.disabled = false;
