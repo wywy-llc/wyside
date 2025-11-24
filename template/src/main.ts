@@ -2,8 +2,8 @@ import app from './api.js';
 import { SpreadsheetType, getSpreadsheetId } from './config.js';
 import { UniversalSheetsClient } from './core/client.js';
 import { UniversalGmailClient } from './core/gmail-client.js';
-import { TodoUseCase } from './features/todo/TodoUseCase.js';
 import { EmailUseCase } from './features/email/EmailUseCase.js';
+import { TodoUseCase } from './features/todo/TodoUseCase.js';
 import { UniversalTodoRepo } from './features/todo/UniversalTodoRepo.js';
 
 // GAS/Nodeどちらでも動くグローバル参照
@@ -13,6 +13,80 @@ const globalScope: any =
     : typeof global !== 'undefined'
       ? global
       : {};
+
+// GAS runtime lacks Fetch API (Request/Headers). Provide a minimal polyfill for Hono routing.
+if (!globalScope.Headers) {
+  class HeadersPolyfill {
+    private map: Record<string, string> = {};
+
+    constructor(init?: Record<string, string> | [string, string][]) {
+      if (Array.isArray(init)) {
+        init.forEach(([k, v]) => this.set(k, v));
+      } else if (init) {
+        Object.entries(init).forEach(([k, v]) => this.set(k, v));
+      }
+    }
+
+    append(key: string, value: string) {
+      const lower = key.toLowerCase();
+      this.map[lower] = this.map[lower]
+        ? `${this.map[lower]}, ${value}`
+        : value;
+    }
+
+    set(key: string, value: string) {
+      this.map[key.toLowerCase()] = value;
+    }
+
+    get(key: string) {
+      const lower = key.toLowerCase();
+      return lower in this.map ? this.map[lower] : null;
+    }
+
+    has(key: string) {
+      return key.toLowerCase() in this.map;
+    }
+
+    forEach(callback: (value: string, key: string) => void, thisArg?: unknown) {
+      Object.entries(this.map).forEach(([k, v]) =>
+        callback.call(thisArg, v, k)
+      );
+    }
+
+    entries() {
+      return Object.entries(this.map)[Symbol.iterator]();
+    }
+  }
+
+  globalScope.Headers = HeadersPolyfill;
+}
+
+if (!globalScope.Request) {
+  class RequestPolyfill {
+    url: string;
+    method: string;
+    headers: InstanceType<typeof globalScope.Headers>;
+    body?: string;
+
+    constructor(input: string, init: any = {}) {
+      this.url = input;
+      this.method = (init.method || 'GET').toString().toUpperCase();
+      this.headers = new globalScope.Headers(init.headers || {});
+      this.body = init.body;
+    }
+
+    async json() {
+      if (!this.body) return {};
+      return JSON.parse(this.body);
+    }
+
+    async text() {
+      return this.body ? String(this.body) : '';
+    }
+  }
+
+  globalScope.Request = RequestPolyfill;
+}
 
 // Use MAIN spreadsheet for this Todo app
 const SPREADSHEET_ID = getSpreadsheetId(SpreadsheetType.MAIN);
@@ -72,14 +146,20 @@ async function doPost(e: GoogleAppsScript.Events.DoPost) {
 }
 
 /**
- * 従来のGAS UI関数（互換性のため維持）
+ * スプレッドシート UI 用のメニューエントリ
+ * GAS でメニューを表示する現行のトリガー (onOpen/onInstall)
  */
 function onOpen() {
-  SpreadsheetApp.getUi()
-    .createMenu('Wyside Todo')
-    .addItem('Show Todos', 'showTodoUI')
-    .addItem('Send TODOs by Email', 'showEmailDialog')
-    .addToUi();
+  const ui = SpreadsheetApp.getUi();
+  const menu = ui.createMenu('Wyside Todo');
+  menu.addItem('Show Todos', 'showTodoUI');
+  menu.addItem('Send TODOs by Email', 'showEmailDialog');
+  menu.addToUi();
+}
+
+// Add-on install hook: ensure menu shows on first install
+function onInstall() {
+  onOpen();
 }
 
 function showTodoUI() {
@@ -132,6 +212,7 @@ function apiDeleteTodo(id: string) {
 globalScope.doGet = doGet;
 globalScope.doPost = doPost;
 globalScope.onOpen = onOpen;
+globalScope.onInstall = onInstall;
 globalScope.showTodoUI = showTodoUI;
 globalScope.showEmailDialog = showEmailDialog;
 globalScope.sendTodosEmail = sendTodosEmail;
