@@ -9,6 +9,22 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 export default tseslint.config(
+  // Global ignores must come first in ESLint 9.x Flat Config
+  {
+    ignores: [
+      'node_modules/',
+      'dist/',
+      'build/',
+      'template/**',
+      'template-ui/**',
+      'mcp-server/**',
+      '**/*.mjs',
+      '**/*.cjs',
+      '*.config.js',
+      'test-projects/**',
+      '.tmp-*/**',
+    ],
+  },
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
   prettierConfig,
@@ -53,18 +69,5 @@ export default tseslint.config(
       '@typescript-eslint/no-base-to-string': 'off',
       '@typescript-eslint/no-unsafe-call': 'off',
     },
-  },
-  {
-    ignores: [
-      'node_modules/',
-      'dist/',
-      'build/',
-      'template/',
-      'template-ui/',
-      'mcp-server/',
-      '**/*.mjs',
-      '**/*.cjs',
-      '*.config.js',
-    ],
   }
 );
