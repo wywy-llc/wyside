@@ -3,11 +3,16 @@ import { SpreadsheetType, getSpreadsheetId } from './config.js';
 import { UniversalSheetsClient } from './core/client.js';
 import { UniversalGmailClient } from './core/gmail-client.js';
 import { TodoUseCase } from './features/todo/TodoUseCase.js';
-import { UniversalTodoRepo } from './features/todo/UniversalTodoRepo.js';
 import { EmailUseCase } from './features/email/EmailUseCase.js';
+import { UniversalTodoRepo } from './features/todo/UniversalTodoRepo.js';
 
-// Global functions for GAS
-declare const global: any;
+// GAS/Nodeどちらでも動くグローバル参照
+const globalScope: any =
+  typeof globalThis !== 'undefined'
+    ? globalThis
+    : typeof global !== 'undefined'
+      ? global
+      : {};
 
 // Use MAIN spreadsheet for this Todo app
 const SPREADSHEET_ID = getSpreadsheetId(SpreadsheetType.MAIN);
@@ -124,13 +129,13 @@ function apiDeleteTodo(id: string) {
 }
 
 // Expose to global for GAS
-global.doGet = doGet;
-global.doPost = doPost;
-global.onOpen = onOpen;
-global.showTodoUI = showTodoUI;
-global.showEmailDialog = showEmailDialog;
-global.sendTodosEmail = sendTodosEmail;
-global.apiListTodos = apiListTodos;
-global.apiAddTodo = apiAddTodo;
-global.apiToggleTodo = apiToggleTodo;
-global.apiDeleteTodo = apiDeleteTodo;
+globalScope.doGet = doGet;
+globalScope.doPost = doPost;
+globalScope.onOpen = onOpen;
+globalScope.showTodoUI = showTodoUI;
+globalScope.showEmailDialog = showEmailDialog;
+globalScope.sendTodosEmail = sendTodosEmail;
+globalScope.apiListTodos = apiListTodos;
+globalScope.apiAddTodo = apiAddTodo;
+globalScope.apiToggleTodo = apiToggleTodo;
+globalScope.apiDeleteTodo = apiDeleteTodo;

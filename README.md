@@ -29,6 +29,23 @@ Here are the main features:
 
   Generate "Test-Separated Hybrid" code that runs on both GAS and Node.js using the built-in MCP server.
 
+### GAS/Node 共通のグローバル公開ルール
+
+Apps Script の UI/トリガー関数を公開するときは、環境ごとに `global` の有無が異なるため、次のパターンで安全に束縛してください。
+
+```ts
+const globalScope =
+  typeof globalThis !== 'undefined'
+    ? globalThis
+    : typeof global !== 'undefined'
+      ? global
+      : {};
+
+globalScope.onOpen = onOpen;
+```
+
+この形にしておくと、Node でも GAS でも `ReferenceError` を起こさずメニュー作成などが機能します。
+
 ## Quick Start
 
 The simplest way to get started with a fully configured environment (including GCP setup) is:

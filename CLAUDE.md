@@ -137,7 +137,11 @@ wyside/
    - **NO** native `spawn`; use `cross-spawn`.
    - **NO** direct `fs.writeFile`; use `write-file-atomic`.
 
-3. **Template Management:**
+3. **Global Exposure (GAS UI/Triggers):**
+   - Use a safe global binding: `const globalScope = typeof globalThis !== 'undefined' ? globalThis : typeof global !== 'undefined' ? global : {};`
+   - Export GAS entrypoints to `globalScope.*` (never bare `global.*`) to avoid `ReferenceError` in GAS runtime and keep Node/GAS parity.
+
+4. **Template Management:**
    - **Template Immutability:** Templates are copied once; changes require a full `npm run build` and fresh `init` to test.
    - **Linting:** Do NOT lint `template/` directories (users customize these).
 
