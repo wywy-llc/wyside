@@ -166,7 +166,6 @@
               checkbox.type = 'checkbox';
               checkbox.checked = todo.completed;
               checkbox.setAttribute('aria-label', 'Mark as ' + (todo.completed ? 'incomplete' : 'complete'));
-              checkbox.addEventListener('change', () => handleToggle(todo.id, checkbox, div));
 
               // Create text span
               const span = document.createElement('span');
@@ -179,7 +178,6 @@
               deleteBtn.type = 'button';
               deleteBtn.textContent = '×';
               deleteBtn.setAttribute('aria-label', 'Delete task: ' + todo.title);
-              deleteBtn.addEventListener('click', () => handleRemove(todo.id));
 
               div.appendChild(checkbox);
               div.appendChild(span);
@@ -251,10 +249,15 @@
          * Handles toggling a todo's completion status
          * @param {string} id - Todo ID
          * @param {HTMLInputElement} checkbox - Checkbox element
-         * @param {HTMLElement} div - Todo item container
          */
-        function handleToggle(id, checkbox, div) {
-          const newCheckedState = checkbox.checked;
+        function handleToggle(id, checkbox) {
+          const div = todoListEl.querySelector(`[data-id="${id}"]`);
+          if (!div) return;
+
+          const checkboxEl = div.querySelector('input[type="checkbox"]');
+          if (!checkboxEl) return;
+
+          const newCheckedState = checkboxEl.checked;
 
           // Update UI optimistically
           if (newCheckedState) {
@@ -264,7 +267,7 @@
           }
 
           // Update aria-label
-          checkbox.setAttribute(
+          checkboxEl.setAttribute(
             'aria-label',
             'Mark as ' + (newCheckedState ? 'incomplete' : 'complete')
           );
@@ -273,13 +276,13 @@
           google.script.run
             .withFailureHandler(err => {
               // Rollback on error: revert checkbox and class
-              checkbox.checked = !newCheckedState;
+              checkboxEl.checked = !newCheckedState;
               if (newCheckedState) {
                 div.classList.remove('completed');
               } else {
                 div.classList.add('completed');
               }
-              checkbox.setAttribute(
+              checkboxEl.setAttribute(
                 'aria-label',
                 'Mark as ' + (!newCheckedState ? 'incomplete' : 'complete')
               );
@@ -298,28 +301,21 @@
 
           // Optimistic removal
           const item = todoListEl.querySelector(`[data-id="${id}"]`);
-          const removedItem = item ? item.cloneNode(true) : null;
-          const nextSibling = item ? item.nextSibling : null;
-          const parent = item ? item.parentNode : null;
+          if (!item) return;
 
-          if (item) item.remove();
+          const removedHTML = item.outerHTML;
+          const parent = item.parentNode;
+          const nextSibling = item.nextSibling;
+
+          item.remove();
 
           google.script.run
             .withFailureHandler(err => {
-              // Rollback on error
-              if (removedItem && parent) {
-                parent.insertBefore(removedItem, nextSibling);
-                // Re-attach event listeners
-                const checkbox = removedItem.querySelector('input[type="checkbox"]');
-                const deleteBtn = removedItem.querySelector('.delete-btn');
-                if (checkbox) {
-                  checkbox.addEventListener('change', () =>
-                    handleToggle(id, checkbox, removedItem)
-                  );
-                }
-                if (deleteBtn) {
-                  deleteBtn.addEventListener('click', () => handleRemove(id));
-                }
+              // Rollback on error: re-insert element
+              if (parent) {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = removedHTML;
+                parent.insertBefore(tempDiv.firstChild, nextSibling);
               }
               handleError(err);
               load(); // Sync with server
@@ -329,6 +325,25 @@
 
         // Event listeners
         addForm.addEventListener('submit', handleAddSubmit);
+
+        // Event delegation for todo list
+        todoListEl.addEventListener('change', (e) => {
+          if (e.target.type === 'checkbox') {
+            const item = e.target.closest('[data-id]');
+            if (item) {
+              handleToggle(item.dataset.id, e.target);
+            }
+          }
+        });
+
+        todoListEl.addEventListener('click', (e) => {
+          if (e.target.classList.contains('delete-btn')) {
+            const item = e.target.closest('[data-id]');
+            if (item) {
+              handleRemove(item.dataset.id);
+            }
+          }
+        });
 
         // Initial load
         load();
