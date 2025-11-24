@@ -1,8 +1,10 @@
+import commonjs from '@rollup/plugin-commonjs';
+import { nodeResolve } from '@rollup/plugin-node-resolve';
+import replace from '@rollup/plugin-replace';
+import dotenv from 'dotenv';
 import cleanup from 'rollup-plugin-cleanup';
 import prettier from 'rollup-plugin-prettier';
 import typescript from 'rollup-plugin-typescript2';
-import replace from '@rollup/plugin-replace';
-import dotenv from 'dotenv';
 
 // Load environment variables from .env
 dotenv.config();
@@ -16,20 +18,30 @@ function removeNodeCode() {
 
       // Remove Node.js-specific imports
       let transformed = code
-        .replace(/import\s+{\s*google\s+as\s+googleApi\s*}\s+from\s+['"]googleapis['"];?/g, '')
+        .replace(
+          /import\s+{\s*google\s+as\s+googleApi\s*}\s+from\s+['"]googleapis['"];?/g,
+          ''
+        )
         .replace(/import\s+path\s+from\s+['"]path['"];?/g, '')
-        .replace(/import\s+{\s*GoogleAuth\s*}\s+from\s+['"]google-auth-library['"];?/g, '');
+        .replace(
+          /import\s+{\s*GoogleAuth\s*}\s+from\s+['"]google-auth-library['"];?/g,
+          ''
+        )
+        .replace(
+          /import\s+{\s*serve\s*}\s+from\s+['"]@hono\/node-server['"];?/g,
+          ''
+        )
+        .replace(/import\s+{\s*config\s*}\s+from\s+['"]dotenv['"];?/g, '');
 
-      // Remove Node.js-only methods (private node* methods)
-      transformed = transformed.replace(
-        /private\s+async\s+node[A-Za-z]+\([^)]*\)\s*:\s*Promise<[^>]+>\s*{[^}]*}/gs,
-        ''
-      );
+      // Remove server.ts specific code
+      if (id.includes('server.ts')) {
+        return { code: '', map: null };
+      }
 
-      // Remove getNodeAuth method
+      // Remove Node.js environment code block in getAuthToken
       transformed = transformed.replace(
-        /private\s+async\s+getNodeAuth\(\)\s*{[\s\S]*?^\s*}/gm,
-        ''
+        /\/\/ Node\.js環境: Service Account認証[\s\S]*?return this\.authToken;[\s\S]*?}/g,
+        '// Node.js環境: Service Account認証\n      throw new Error("Node.js authentication not available in GAS");\n    }'
       );
 
       return { code: transformed, map: null };
@@ -61,9 +73,15 @@ export default {
     name: 'WysideApp',
   },
   plugins: [
+    // Resolve Node modules (Hono等)
+    nodeResolve({
+      preferBuiltins: false,
+      browser: true,
+    }),
+    commonjs(),
     typescript({
       tsconfig: 'tsconfig.json',
-      exclude: ['test/**/*', '**/*.test.ts'],
+      exclude: ['test/**/*', '**/*.test.ts', 'src/server.ts'],
     }),
     // Remove Node.js-only code for GAS deployment
     removeNodeCode(),
