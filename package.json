@@ -1,8 +1,9 @@
 {
   "name": "@wywyjp/wyside",
-  "version": "1.6.1",
+  "version": "1.6.2",
   "type": "module",
   "description": "Apps Script IDE framework",
+  "homepage": "https://wywy-llc.github.io/wyside/",
   "bin": "dist/src/index.js",
   "files": [
     "deploy-ui.mjs",
