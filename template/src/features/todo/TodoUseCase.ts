@@ -18,22 +18,23 @@ import { UniversalTodoRepo } from './UniversalTodoRepo.js';
  */
 export const TodoUseCase = (() => {
   const spreadsheetId = getSpreadsheetId(SpreadsheetType.TODOS);
+
+  // Cache repository instance to avoid redundant creation
+  const repo = UniversalTodoRepo.create(spreadsheetId);
+
   /**
    * ✅ GASとNode.jsで完全に同一の実装
    */
   const listTodos = async (): Promise<Todo[]> => {
-    const repo = UniversalTodoRepo.create(spreadsheetId);
     return repo.getTodos();
   };
 
   const addTodo = async (title: string): Promise<Todo> => {
     if (!title) throw new Error('Title is required');
-    const repo = UniversalTodoRepo.create(spreadsheetId);
     return repo.addTodo(title);
   };
 
   const toggleTodo = async (id: string): Promise<void> => {
-    const repo = UniversalTodoRepo.create(spreadsheetId);
     const todos = await repo.getTodos();
     const todo = todos.find(t => t.id === id);
     if (!todo) throw new Error('Todo not found');
@@ -42,7 +43,6 @@ export const TodoUseCase = (() => {
   };
 
   const deleteTodo = async (id: string): Promise<void> => {
-    const repo = UniversalTodoRepo.create(spreadsheetId);
     await repo.deleteTodo(id);
   };
 

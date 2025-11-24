@@ -2,13 +2,27 @@ import { SheetsClient } from '@/core/client.js';
 import { TODO_RANGE } from '../../core/constants.js';
 import { Todo } from '../../core/types.js';
 
+// Cache crypto availability check
+let hasCrypto: boolean | null = null;
+
 // Utility for UUID
 function generateUuid(): string {
   if (typeof Utilities !== 'undefined') {
     return Utilities.getUuid();
   }
-  // Node.js environment setup should provide crypto
-  return crypto.randomUUID();
+
+  // Cache crypto check to avoid repeated typeof checks
+  if (hasCrypto === null) {
+    hasCrypto =
+      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function';
+  }
+
+  if (hasCrypto) {
+    return crypto.randomUUID();
+  }
+
+  // Fallback for environments without crypto
+  throw new Error('UUID generation not available in this environment');
 }
 
 /**
@@ -33,8 +47,11 @@ export const UniversalTodoRepo = (() => {
     const getTodos = async (): Promise<Todo[]> => {
       const response = await SheetsClient.batchGet(spreadsheetId, [TODO_RANGE]);
       const rows = response.valueRanges?.[0]?.values || [];
+
+      // Cache crypto availability check
+      // Using filter before map avoids creating temporary Todo objects for empty rows
       return rows
-        .filter((row: string[]) => row && row[0] && row[0].trim() !== '') // Skip empty rows
+        .filter((row: string[]) => row && row[0] && row[0].trim() !== '')
         .map((row: string[]) => ({
           id: row[0],
           title: row[1],

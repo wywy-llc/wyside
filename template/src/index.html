@@ -57,6 +57,11 @@
       button[type='submit']:hover {
         background: #1765cc;
       }
+      /* Performance: Add loading state */
+      .loading {
+        opacity: 0.5;
+        pointer-events: none;
+      }
     </style>
   </head>
   <body>
@@ -68,71 +73,138 @@
     <div id="todo-list">Loading...</div>
 
     <script>
+      // Performance: Cache DOM references
+      const todoListEl = document.getElementById('todo-list');
+      const addForm = document.getElementById('add-form');
+      const newTodoInput = document.getElementById('new-todo');
+      const addBtn = document.getElementById('add-btn');
+
       function render(todos) {
-        const list = document.getElementById('todo-list');
-        list.innerHTML = '';
+        // Performance: Use DocumentFragment for batch DOM updates
+        const fragment = document.createDocumentFragment();
+        
         if (todos.length === 0) {
-          list.innerHTML =
-            '<div style="color: #888; font-style: italic;">No tasks yet.</div>';
-          return;
+          const emptyDiv = document.createElement('div');
+          emptyDiv.style.cssText = 'color: #888; font-style: italic;';
+          emptyDiv.textContent = 'No tasks yet.';
+          fragment.appendChild(emptyDiv);
+        } else {
+          todos.forEach(todo => {
+            const div = document.createElement('div');
+            div.className = 'todo-item ' + (todo.completed ? 'completed' : '');
+            div.dataset.id = todo.id;
+            
+            // Performance: Use DOM API instead of innerHTML for security and speed
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = todo.completed;
+            checkbox.onchange = () => toggle(todo.id);
+            
+            const span = document.createElement('span');
+            span.className = 'todo-text';
+            span.textContent = todo.title; // XSS protection
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.textContent = '×';
+            deleteBtn.title = 'Delete';
+            deleteBtn.onclick = () => remove(todo.id);
+            
+            div.appendChild(checkbox);
+            div.appendChild(span);
+            div.appendChild(deleteBtn);
+            fragment.appendChild(div);
+          });
         }
-        todos.forEach(todo => {
-          const div = document.createElement('div');
-          div.className = 'todo-item ' + (todo.completed ? 'completed' : '');
-          div.innerHTML = `
-            <input type="checkbox" ${todo.completed ? 'checked' : ''} 
-                   onchange="toggle('${todo.id}')">
-            <span class="todo-text">${todo.title}</span>
-            <button class="delete-btn" onclick="remove('${todo.id}')" title="Delete">&times;</button>
-          `;
-          list.appendChild(div);
-        });
+        
+        // Performance: Single DOM update
+        todoListEl.innerHTML = '';
+        todoListEl.appendChild(fragment);
       }
 
       function load() {
+        todoListEl.classList.add('loading');
         google.script.run
-          .withSuccessHandler(render)
-          .withFailureHandler(err => alert('Error: ' + err))
+          .withSuccessHandler(todos => {
+            render(todos);
+            todoListEl.classList.remove('loading');
+          })
+          .withFailureHandler(handleError)
           .apiListTodos();
       }
 
-      document.getElementById('add-form').addEventListener('submit', e => {
-        e.preventDefault();
-        const input = document.getElementById('new-todo');
-        const btn = document.getElementById('add-btn');
-        const originalText = btn.innerText;
+      // Performance: Reusable error handler
+      function handleError(err) {
+        alert('Error: ' + err);
+        todoListEl.classList.remove('loading');
+      }
 
-        btn.disabled = true;
-        btn.innerText = '...';
+      addForm.addEventListener('submit', e => {
+        e.preventDefault();
+        const title = newTodoInput.value.trim();
+        if (!title) return;
+        
+        const originalText = addBtn.textContent;
+        addBtn.disabled = true;
+        addBtn.textContent = '...';
 
         google.script.run
           .withSuccessHandler(() => {
-            input.value = '';
-            btn.disabled = false;
-            btn.innerText = originalText;
+            newTodoInput.value = '';
+            addBtn.disabled = false;
+            addBtn.textContent = originalText;
             load();
           })
           .withFailureHandler(err => {
-            alert('Error: ' + err);
-            btn.disabled = false;
-            btn.innerText = originalText;
+            handleError(err);
+            addBtn.disabled = false;
+            addBtn.textContent = originalText;
           })
-          .apiAddTodo(input.value);
+          .apiAddTodo(title);
       });
 
       function toggle(id) {
-        // Optimistic update could go here
+        // Performance: Optimistic UI update
+        const item = todoListEl.querySelector(`[data-id="${id}"]`);
+        if (item) {
+          item.classList.toggle('completed');
+          const checkbox = item.querySelector('input[type="checkbox"]');
+          if (checkbox) checkbox.checked = !checkbox.checked;
+        }
+        
         google.script.run
-          .withSuccessHandler(load)
-          .withFailureHandler(alert)
+          .withSuccessHandler(() => {
+            // No full reload needed - optimistic update already applied
+          })
+          .withFailureHandler(err => {
+            // Rollback on error
+            if (item) item.classList.toggle('completed');
+            handleError(err);
+            load(); // Sync with server
+          })
           .apiToggleTodo(id);
       }
 
       function remove(id) {
         if (!confirm('Delete this task?')) return;
+        
+        // Performance: Optimistic removal
+        const item = todoListEl.querySelector(`[data-id="${id}"]`);
+        const removedItem = item ? item.cloneNode(true) : null;
+        if (item) item.remove();
+        
         google.script.run
-          .withSuccessHandler(load)
-          .withFailureHandler(alert)
+          .withSuccessHandler(() => {
+            // Already removed optimistically
+          })
+          .withFailureHandler(err => {
+            // Rollback on error
+            if (removedItem && item && item.parentNode) {
+              item.parentNode.insertBefore(removedItem, item.nextSibling);
+            }
+            handleError(err);
+            load(); // Sync with server
+          })
           .apiDeleteTodo(id);
       }
 
