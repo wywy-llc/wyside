@@ -1,6 +1,6 @@
 {
   "name": "@wywyjp/wyside",
-  "version": "1.6.2",
+  "version": "1.6.3",
   "type": "module",
   "description": "Apps Script IDE framework",
   "homepage": "https://wywy-llc.github.io/wyside/",
