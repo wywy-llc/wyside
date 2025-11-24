@@ -7,12 +7,15 @@ import { TodoUseCase } from './features/todo/TodoUseCase.js';
 import { UniversalTodoRepo } from './features/todo/UniversalTodoRepo.js';
 
 // GAS/Nodeどちらでも動くグローバル参照
+// eslint-disable-next-line @typescript-eslint/no-implied-eval
+const getGlobalScope = new Function('return this');
 const globalScope: any =
   typeof globalThis !== 'undefined'
     ? globalThis
     : typeof global !== 'undefined'
       ? global
-      : {};
+      : // Fallback for GAS V8 where globalThis/global are missing
+        getGlobalScope();
 
 // GAS runtime lacks Fetch API (Request/Headers). Provide a minimal polyfill for Hono routing.
 if (!globalScope.Headers) {
@@ -142,7 +145,7 @@ function getEmailUseCase() {
  * GAS用のWeb Appエントリーポイント
  * Honoアプリケーションを経由してAPIを公開
  */
-async function doGet(e: GoogleAppsScript.Events.DoGet) {
+export async function doGet(e: GoogleAppsScript.Events.DoGet) {
   // GASのリクエストをWeb標準Requestに変換
   const url = e.parameter.url || '/health';
   const request = new Request(`https://script.google.com${url}`, {
@@ -159,7 +162,7 @@ async function doGet(e: GoogleAppsScript.Events.DoGet) {
   );
 }
 
-async function doPost(e: GoogleAppsScript.Events.DoPost) {
+export async function doPost(e: GoogleAppsScript.Events.DoPost) {
   const url = e.parameter.url || '/';
   const body = e.postData?.contents || '{}';
 
@@ -183,7 +186,7 @@ async function doPost(e: GoogleAppsScript.Events.DoPost) {
  * スプレッドシート UI 用のメニューエントリ
  * GAS でメニューを表示する現行のトリガー (onOpen/onInstall)
  */
-function onOpen() {
+export function onOpen() {
   const ui = SpreadsheetApp.getUi();
   const menu = ui.createMenu('Wyside Todo');
   menu.addItem('Show Todos', 'showTodoUI');
@@ -192,11 +195,11 @@ function onOpen() {
 }
 
 // Add-on install hook: ensure menu shows on first install
-function onInstall() {
+export function onInstall() {
   onOpen();
 }
 
-function showTodoUI() {
+export function showTodoUI() {
   const html =
     HtmlService.createHtmlOutputFromFile('index').setTitle('Wyside Todo');
   SpreadsheetApp.getUi().showSidebar(html);
@@ -205,7 +208,7 @@ function showTodoUI() {
 /**
  * メール送信ダイアログを表示
  */
-function showEmailDialog() {
+export function showEmailDialog() {
   const html = HtmlService.createHtmlOutputFromFile('email-dialog')
     .setWidth(400)
     .setHeight(200);
@@ -215,7 +218,7 @@ function showEmailDialog() {
 /**
  * TODOリストをメール送信（ダイアログから呼び出し）
  */
-async function sendTodosEmail(email: string) {
+export async function sendTodosEmail(email: string) {
   try {
     await getEmailUseCase().sendTodosEmail(email);
     return { success: true, message: 'Email sent successfully!' };
@@ -226,31 +229,18 @@ async function sendTodosEmail(email: string) {
 }
 
 // 従来のAPI Functions（互換性のため維持）
-function apiListTodos() {
+export function apiListTodos() {
   return getTodoUseCase().listTodos();
 }
 
-function apiAddTodo(title: string) {
+export function apiAddTodo(title: string) {
   return getTodoUseCase().addTodo(title);
 }
 
-function apiToggleTodo(id: string) {
+export function apiToggleTodo(id: string) {
   return getTodoUseCase().toggleTodo(id);
 }
 
-function apiDeleteTodo(id: string) {
+export function apiDeleteTodo(id: string) {
   return getTodoUseCase().deleteTodo(id);
 }
-
-// Expose to global for GAS
-globalScope.doGet = doGet;
-globalScope.doPost = doPost;
-globalScope.onOpen = onOpen;
-globalScope.onInstall = onInstall;
-globalScope.showTodoUI = showTodoUI;
-globalScope.showEmailDialog = showEmailDialog;
-globalScope.sendTodosEmail = sendTodosEmail;
-globalScope.apiListTodos = apiListTodos;
-globalScope.apiAddTodo = apiAddTodo;
-globalScope.apiToggleTodo = apiToggleTodo;
-globalScope.apiDeleteTodo = apiDeleteTodo;

@@ -50,6 +50,92 @@ function removeNodeCode() {
   };
 }
 
+// Plugin to automatically detect exported functions and expose them to GAS global scope
+function exposeGasFunctions() {
+  const exportedFunctions = new Set();
+
+  return {
+    name: 'expose-gas-functions',
+
+    // Step 1: Scan source files to detect exported functions
+    transform(code, id) {
+      // Only process main.ts - the entry point for GAS
+      // This prevents detecting helper functions from other modules
+      if (!id.endsWith('/main.ts')) {
+        return null;
+      }
+
+      // Detect exported functions with various patterns:
+      // - export function name() { ... }
+      // - export async function name() { ... }
+      const exportPatterns = [
+        /export\s+function\s+(\w+)\s*\(/g,
+        /export\s+async\s+function\s+(\w+)\s*\(/g,
+      ];
+
+      exportPatterns.forEach(pattern => {
+        let match;
+        while ((match = pattern.exec(code)) !== null) {
+          exportedFunctions.add(match[1]);
+        }
+      });
+
+      return null; // Don't modify the code in transform phase
+    },
+
+    // Step 2: Modify the final bundled code
+    renderChunk(code) {
+      // Convert Set to sorted array for consistent output
+      const functions = Array.from(exportedFunctions).sort();
+
+      if (functions.length === 0) {
+        console.warn('⚠️  No exported functions detected. GAS triggers may not work.');
+        return null;
+      }
+
+      console.log(`✅ Auto-detected ${functions.length} exported functions:`, functions.join(', '));
+
+      // Step 2a: Wrap IIFE with variable assignment
+      let wrappedCode = code.replace(
+        /^\(function\s*\(\)\s*\{/,
+        'var WysideApp = (function() {'
+      );
+
+      // Step 2b: Generate return object dynamically based on detected exports
+      const returnObject = functions.map(name => `    ${name}: ${name},`).join('\n');
+      const returnStatement = `
+  // Auto-generated API object from exported functions
+  return {
+${returnObject}
+  };
+})();`;
+
+      // Step 2c: Generate global function declarations
+      const globalFunctions = functions.map(name => {
+        return `
+/**
+ * Auto-generated GAS global wrapper for ${name}
+ * Delegates to WysideApp.${name}
+ */
+function ${name}() {
+  return WysideApp.${name}.apply(this, arguments);
+}`;
+      }).join('\n');
+
+      // Step 2d: Remove CommonJS exports (if any)
+      wrappedCode = wrappedCode.replace(/\s+exports\.\w+\s*=\s*\w+;/g, '');
+
+      // Step 2e: Replace IIFE closing with return + global functions
+      wrappedCode = wrappedCode.replace(
+        /return exports;\s*\}\)\(\{?\}?\);[\s]*$/,
+        returnStatement + '\n' + globalFunctions + '\n'
+      );
+
+      return { code: wrappedCode, map: null };
+    },
+  };
+}
+
 // Determine environment (prod or dev)
 const isProduction = process.env.NODE_ENV === 'production';
 const suffix = isProduction ? 'PROD' : 'DEV';
@@ -110,6 +196,8 @@ export default {
       },
     }),
     cleanup({ comments: 'none', extensions: ['.ts', '.js'] }),
+    // Expose GAS functions to global scope (must be before prettier)
+    exposeGasFunctions(),
     prettier({ parser: 'typescript' }),
   ],
   context: 'this',
