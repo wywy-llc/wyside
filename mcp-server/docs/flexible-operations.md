@@ -9,41 +9,41 @@ CRUD操作に限定されない、拡張可能な操作カタログシステム�
 
 ### データ操作 (category: 'data')
 
-| 操作ID | 説明 | パラメータ | 戻り値 |
-|--------|------|-----------|--------|
-| `getAll` | 全データを取得 | なし | `Feature[]` |
-| `getById` | IDで単一データを取得 | `id: string` | `Feature \| null` |
-| `create` | 新規データを作成 | `data: Partial<Feature>` | `Feature` |
-| `update` | データを更新 | `id: string, updates: Partial<Feature>` | `void` |
-| `delete` | データを削除（クリア） | `id: string` | `void` |
-| `search` | 条件でデータを検索 | `predicate: (item) => boolean` | `Feature[]` |
+| 操作ID    | 説明                   | パラメータ                              | 戻り値            |
+| --------- | ---------------------- | --------------------------------------- | ----------------- |
+| `getAll`  | 全データを取得         | なし                                    | `Feature[]`       |
+| `getById` | IDで単一データを取得   | `id: string`                            | `Feature \| null` |
+| `create`  | 新規データを作成       | `data: Partial<Feature>`                | `Feature`         |
+| `update`  | データを更新           | `id: string, updates: Partial<Feature>` | `void`            |
+| `delete`  | データを削除（クリア） | `id: string`                            | `void`            |
+| `search`  | 条件でデータを検索     | `predicate: (item) => boolean`          | `Feature[]`       |
 
 ### 範囲操作 (category: 'data')
 
-| 操作ID | 説明 | パラメータ | 戻り値 |
-|--------|------|-----------|--------|
-| `getRange` | 指定範囲のデータを取得 | `range: string` | `any[][]` |
-| `setRange` | 指定範囲にデータを設定 | `range: string, values: any[][]` | `void` |
-| `clearRange` | 指定範囲をクリア | `range: string` | `void` |
+| 操作ID       | 説明                   | パラメータ                       | 戻り値    |
+| ------------ | ---------------------- | -------------------------------- | --------- |
+| `getRange`   | 指定範囲のデータを取得 | `range: string`                  | `any[][]` |
+| `setRange`   | 指定範囲にデータを設定 | `range: string, values: any[][]` | `void`    |
+| `clearRange` | 指定範囲をクリア       | `range: string`                  | `void`    |
 
 ### 書式操作 (category: 'format')
 
-| 操作ID | 説明 | パラメータ | 戻り値 |
-|--------|------|-----------|--------|
+| 操作ID        | 説明             | パラメータ                   | 戻り値 |
+| ------------- | ---------------- | ---------------------------- | ------ |
 | `formatCells` | セルの書式を設定 | `range: string, format: any` | `void` |
 
 ### 分析操作 (category: 'analysis')
 
-| 操作ID | 説明 | パラメータ | 戻り値 |
-|--------|------|-----------|--------|
-| `count` | データ件数を取得 | なし | `number` |
+| 操作ID  | 説明             | パラメータ | 戻り値   |
+| ------- | ---------------- | ---------- | -------- |
+| `count` | データ件数を取得 | なし       | `number` |
 
 ### バッチ操作 (category: 'data')
 
-| 操作ID | 説明 | パラメータ | 戻り値 |
-|--------|------|-----------|--------|
-| `batchCreate` | 複数データを一括作成 | `items: Partial<Feature>[]` | `Feature[]` |
-| `batchUpdate` | 複数データを一括更新 | `updates: Array<{id, data}>` | `void` |
+| 操作ID        | 説明                 | パラメータ                   | 戻り値      |
+| ------------- | -------------------- | ---------------------------- | ----------- |
+| `batchCreate` | 複数データを一括作成 | `items: Partial<Feature>[]`  | `Feature[]` |
+| `batchUpdate` | 複数データを一括更新 | `updates: Array<{id, data}>` | `void`      |
 
 ## 🚀 使用方法
 
@@ -58,6 +58,7 @@ const result = await scaffoldFeature({
 ```
 
 生成されるメソッド:
+
 - `getAll()`
 - `create(data)`
 - `update(id, updates)`
@@ -74,11 +75,13 @@ const result = await scaffoldFeature({
 ```
 
 生成されるメソッド:
+
 - `getAll()`
 - `search(predicate)` ← ラムダ関数で柔軟な検索
 - `count()`
 
 使用例:
+
 ```typescript
 // 在庫切れ商品を検索
 const outOfStock = await ProductRepo.search(p => p.stock === 0);
@@ -98,11 +101,13 @@ const result = await scaffoldFeature({
 ```
 
 生成されるメソッド:
+
 - `getRange(range)` ← 任意の範囲を取得
 - `setRange(range, values)` ← 任意の範囲に設定
 - `clearRange(range)` ← 任意の範囲をクリア
 
 使用例:
+
 ```typescript
 // A1:C10の範囲を取得
 const data = await DataSheetRepo.getRange('Sheet1!A1:C10');
@@ -128,10 +133,12 @@ const result = await scaffoldFeature({
 ```
 
 生成されるメソッド:
+
 - `batchCreate(items)` ← 複数データを一括作成
 - `batchUpdate(updates)` ← 複数データを一括更新
 
 使用例:
+
 ```typescript
 // 100件のデータを一括作成
 const items = Array.from({ length: 100 }, (_, i) => ({
@@ -165,31 +172,31 @@ const result = await scaffoldFeature({
 ### パターン1: シンプルな台帳管理
 
 ```typescript
-operations: ['getAll', 'create', 'update', 'delete', 'count']
+operations: ['getAll', 'create', 'update', 'delete', 'count'];
 ```
 
 ### パターン2: 検索可能なマスタデータ
 
 ```typescript
-operations: ['getAll', 'getById', 'search', 'count']
+operations: ['getAll', 'getById', 'search', 'count'];
 ```
 
 ### パターン3: 大量データのインポート
 
 ```typescript
-operations: ['batchCreate', 'batchUpdate', 'count']
+operations: ['batchCreate', 'batchUpdate', 'count'];
 ```
 
 ### パターン4: 柔軟なデータ操作
 
 ```typescript
-operations: ['getRange', 'setRange', 'clearRange', 'formatCells']
+operations: ['getRange', 'setRange', 'clearRange', 'formatCells'];
 ```
 
 ### パターン5: フル機能
 
 ```typescript
-operations: ['all']
+operations: ['all'];
 ```
 
 ## 🔧 カスタム操作の追加
@@ -206,11 +213,9 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
     name: 'Custom Operation',
     category: 'custom',
     description: 'カスタム操作の説明',
-    parameters: [
-      { name: 'param1', type: 'string', required: true },
-    ],
+    parameters: [{ name: 'param1', type: 'string', required: true }],
     returnType: 'CustomResult',
-    generate: (ctx) => `
+    generate: ctx => `
     const customOperation = async (param1: string): Promise<CustomResult> => {
       // カスタムロジック
       return result;
@@ -223,12 +228,12 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
 
 ```typescript
 interface OperationDefinition {
-  id: string;                    // 操作ID（一意）
-  name: string;                  // 表示名
-  category: string;              // カテゴリ（data, format, structure, analysis, custom）
-  description: string;           // 説明
+  id: string; // 操作ID（一意）
+  name: string; // 表示名
+  category: string; // カテゴリ（data, format, structure, analysis, custom）
+  description: string; // 説明
   parameters: OperationParameter[]; // パラメータ定義
-  returnType: string;            // 戻り値の型（テンプレート変数使用可）
+  returnType: string; // 戻り値の型（テンプレート変数使用可）
   generate: (context) => string; // コード生成関数
 }
 ```
@@ -237,10 +242,10 @@ interface OperationDefinition {
 
 ```typescript
 interface OperationContext {
-  featureName: string;         // PascalCase（例: "Task"）
-  featureNameCamel: string;    // camelCase（例: "task"）
-  schema?: FeatureSchema;      // スキーマ定義
-  rangeName?: string;          // 範囲定数名（例: "TASK_RANGE"）
+  featureName: string; // PascalCase（例: "Task"）
+  featureNameCamel: string; // camelCase（例: "task"）
+  schema?: FeatureSchema; // スキーマ定義
+  rangeName?: string; // 範囲定数名（例: "TASK_RANGE"）
   params?: Record<string, any>; // カスタムパラメータ
 }
 ```
@@ -248,15 +253,19 @@ interface OperationContext {
 ## 📊 カテゴリ別の操作一覧
 
 ### データ操作 (data)
+
 全8種類: `getAll`, `getById`, `create`, `update`, `delete`, `search`, `getRange`, `setRange`, `clearRange`
 
 ### 書式操作 (format)
+
 全1種類: `formatCells`
 
 ### 分析操作 (analysis)
+
 全1種類: `count`
 
 ### バッチ操作 (data)
+
 全2種類: `batchCreate`, `batchUpdate`
 
 ## 🎯 ベストプラクティス
@@ -268,10 +277,10 @@ interface OperationContext {
 
 ```typescript
 // ❌ 悪い例: 全操作を生成
-operations: ['all']
+operations: ['all'];
 
 // ✅ 良い例: 必要な操作だけ
-operations: ['getAll', 'create', 'update']
+operations: ['getAll', 'create', 'update'];
 ```
 
 ### 2. パフォーマンスを考慮
@@ -290,10 +299,10 @@ await repo.batchCreate(items); // 1回のAPI呼び出し
 
 ### 3. 操作の命名規則
 
-| 操作ID | 生成されるメソッド名 | 理由 |
-|--------|-------------------|------|
-| `delete` | `remove` | JavaScriptの予約語を避けるため |
-| その他 | そのまま | 直感的な命名 |
+| 操作ID   | 生成されるメソッド名 | 理由                           |
+| -------- | -------------------- | ------------------------------ |
+| `delete` | `remove`             | JavaScriptの予約語を避けるため |
+| その他   | そのまま             | 直感的な命名                   |
 
 ## 🔍 トラブルシューティング
 

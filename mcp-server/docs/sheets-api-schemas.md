@@ -66,6 +66,7 @@ interface Schema$BatchGetValuesResponse {
 ```
 
 **使用例**:
+
 ```typescript
 const response = await SheetsClient.batchGet(spreadsheetId, ['Todos!A2:E']);
 const rows = response.valueRanges?.[0]?.values || [];
@@ -97,6 +98,7 @@ interface Schema$AppendValuesResponse {
 ```
 
 **使用例**:
+
 ```typescript
 const rowValues = [id, title, 'FALSE', createdAt, updatedAt];
 await SheetsClient.appendValues(spreadsheetId, 'Todos!A2:E', [rowValues]);
@@ -145,6 +147,7 @@ interface Schema$UpdateValuesResponse {
 ```
 
 **使用例**:
+
 ```typescript
 const range = `Todos!A${rowNumber}:E${rowNumber}`;
 const values = [id, title, completed ? 'TRUE' : 'FALSE', createdAt, updatedAt];
@@ -223,6 +226,7 @@ interface Schema$BatchUpdateValuesResponse {
 ```
 
 **使用例**:
+
 ```typescript
 await SheetsClient.batchUpdate(spreadsheetId, [
   { range: 'Todos!A2:E2', values: [[...]] },
@@ -295,22 +299,22 @@ interface TodoSchema {
  * Sheets APIの行配列からオブジェクトへの変換
  */
 const rowToTodo = (row: string[]): Todo => ({
-  id: row[0],          // A列
-  title: row[1],       // B列
+  id: row[0], // A列
+  title: row[1], // B列
   completed: row[2] === 'TRUE', // C列
-  createdAt: row[3],   // D列
-  updatedAt: row[4],   // E列
+  createdAt: row[3], // D列
+  updatedAt: row[4], // E列
 });
 
 /**
  * オブジェクトからSheets APIの行配列への変換
  */
 const todoToRow = (todo: Todo): any[] => [
-  todo.id,             // A列
-  todo.title,          // B列
+  todo.id, // A列
+  todo.title, // B列
   todo.completed ? 'TRUE' : 'FALSE', // C列
-  todo.createdAt,      // D列
-  todo.updatedAt,      // E列
+  todo.createdAt, // D列
+  todo.updatedAt, // E列
 ];
 ```
 
@@ -324,7 +328,12 @@ const featureSchema = {
   fields: [
     { name: 'id', type: 'string', column: 'A' },
     { name: 'title', type: 'string', column: 'B', required: true },
-    { name: 'completed', type: 'boolean', column: 'C', sheetsFormat: 'TRUE/FALSE' },
+    {
+      name: 'completed',
+      type: 'boolean',
+      column: 'C',
+      sheetsFormat: 'TRUE/FALSE',
+    },
     { name: 'createdAt', type: 'string', column: 'D', format: 'date-time' },
     { name: 'updatedAt', type: 'string', column: 'E', format: 'date-time' },
   ],
