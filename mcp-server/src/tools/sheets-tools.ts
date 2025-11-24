@@ -1,17 +1,241 @@
 import chalk from 'chalk';
 import fs from 'fs/promises';
 import { GoogleAuth } from 'google-auth-library';
-import { google } from 'googleapis';
+import { google, sheets_v4 } from 'googleapis';
 import path from 'path';
 
+// 定数定義
+const SHEETS_CONFIG = {
+  VERSION: 'v4',
+  SCOPE: 'https://www.googleapis.com/auth/spreadsheets',
+  KEY_FILE_PATH: 'secrets/service-account.json',
+  CONSTANTS_FILE_PATH: 'src/core/constants.ts',
+} as const;
+
+/**
+ * ツール実行結果の型
+ */
+interface ToolResult {
+  content: Array<{ type: string; text: string }>;
+  isError?: boolean;
+}
+
+/**
+ * GridRange型（Named Range用）
+ */
+interface GridRange {
+  sheetId: number;
+  startRowIndex: number;
+  endRowIndex: number;
+  startColumnIndex: number;
+  endColumnIndex: number;
+}
+
+/**
+ * バッチ更新リクエストの型
+ */
+interface BatchUpdateRequest {
+  deleteNamedRange?: { namedRangeId: string };
+  addNamedRange?: {
+    namedRange: {
+      name: string;
+      range: GridRange;
+    };
+  };
+}
+
+/**
+ * 座標（行・列インデックス）
+ */
+interface Coordinate {
+  rowIndex: number;
+  colIndex: number;
+}
+
+/**
+ * Google Sheets APIクライアントを取得
+ *
+ * @returns Sheets APIクライアント
+ * @remarks サービスアカウント認証を使用。スプレッドシート全操作の権限を要求
+ */
+async function getSheetsClient(): Promise<sheets_v4.Sheets> {
+  const keyFile = path.join(process.cwd(), SHEETS_CONFIG.KEY_FILE_PATH);
+  const auth = new GoogleAuth({
+    keyFile,
+    scopes: [SHEETS_CONFIG.SCOPE],
+  });
+  return google.sheets({ version: SHEETS_CONFIG.VERSION, auth });
+}
+
+/**
+ * A1記法の座標文字列をインデックスに変換
+ *
+ * @param coord - A1記法の座標（例: "A1", "Z10"）
+ * @returns 行・列のインデックス（0始まり）
+ * @throws 無効な座標形式の場合
+ * @remarks 列は英字（A=1, Z=26, AA=27...）、行は数字で表現
+ */
+function parseCoordinate(coord: string): Coordinate {
+  const colMatch = coord.match(/[A-Z]+/);
+  const rowMatch = coord.match(/[0-9]+/);
+
+  if (!colMatch || !rowMatch) {
+    throw new Error(`Invalid coordinate: ${coord}`);
+  }
+
+  const colStr = colMatch[0];
+  let colIndex = 0;
+  for (let i = 0; i < colStr.length; i++) {
+    colIndex = colIndex * 26 + (colStr.charCodeAt(i) - 64);
+  }
+
+  return {
+    rowIndex: parseInt(rowMatch[0], 10) - 1,
+    colIndex: colIndex - 1,
+  };
+}
+
+/**
+ * A1記法をGridRangeに変換
+ *
+ * @param a1Notation - A1記法の範囲（例: "A1:B2"）
+ * @param sheetId - シートID
+ * @returns GridRange形式の範囲
+ * @throws 無効なA1記法の場合
+ * @remarks 単一セル（"A1"）や範囲（"A1:B2"）の両方に対応
+ */
+function parseA1Notation(a1Notation: string, sheetId: number): GridRange {
+  const parts = a1Notation.split(':');
+  const start = parts[0];
+  const end = parts[1] || start;
+
+  const s = parseCoordinate(start);
+  const e = parseCoordinate(end);
+
+  return {
+    sheetId,
+    startRowIndex: s.rowIndex,
+    endRowIndex: e.rowIndex + 1,
+    startColumnIndex: s.colIndex,
+    endColumnIndex: e.colIndex + 1,
+  };
+}
+
+/**
+ * スプレッドシートからシートIDを取得
+ *
+ * @param sheets - Sheets APIクライアント
+ * @param spreadsheetId - スプレッドシートID
+ * @param sheetName - シート名
+ * @returns シートID
+ * @throws シートが見つからない場合
+ * @remarks シート名からシートIDを逆引き
+ */
+async function getSheetId(
+  sheets: sheets_v4.Sheets,
+  spreadsheetId: string,
+  sheetName: string
+): Promise<number> {
+  const { data: ss } = await sheets.spreadsheets.get({ spreadsheetId });
+  const sheet = ss.sheets?.find(s => s.properties?.title === sheetName);
+
+  if (!sheet || typeof sheet.properties?.sheetId !== 'number') {
+    throw new Error(`Sheet "${sheetName}" not found in spreadsheet.`);
+  }
+
+  return sheet.properties.sheetId;
+}
+
+/**
+ * Named Rangeの存在確認
+ *
+ * @param sheets - Sheets APIクライアント
+ * @param spreadsheetId - スプレッドシートID
+ * @param rangeName - 名前付き範囲の名前
+ * @returns 既存のNamed Range ID（存在しない場合はundefined）
+ * @remarks 既存のNamed Rangeを更新する際に使用
+ */
+async function findExistingNamedRange(
+  sheets: sheets_v4.Sheets,
+  spreadsheetId: string,
+  rangeName: string
+): Promise<string | undefined> {
+  const { data: ss } = await sheets.spreadsheets.get({ spreadsheetId });
+  const existing = ss.namedRanges?.find(nr => nr.name === rangeName);
+  return existing?.namedRangeId as string | undefined;
+}
+
+/**
+ * constants.tsファイルを更新
+ *
+ * @param rangeName - 名前付き範囲の名前
+ * @param range - A1記法の範囲
+ * @param messages - 実行ログを格納する配列
+ * @remarks constants.tsが存在しない場合は警告のみ表示
+ */
+async function updateConstantsFile(
+  rangeName: string,
+  range: string,
+  messages: string[]
+): Promise<void> {
+  const constantsPath = path.join(
+    process.cwd(),
+    SHEETS_CONFIG.CONSTANTS_FILE_PATH
+  );
+
+  const fileExists = await fs
+    .access(constantsPath)
+    .then(() => true)
+    .catch(() => false);
+
+  if (!fileExists) {
+    messages.push(
+      chalk.yellow(
+        `⚠️  Constants file not found at ${constantsPath}. Skipping code update.`
+      )
+    );
+    return;
+  }
+
+  let content = await fs.readFile(constantsPath, 'utf8');
+  const exportLine = `export const ${rangeName} = '${range}';`;
+  const regex = new RegExp(`export const ${rangeName} = .*;`);
+
+  if (regex.test(content)) {
+    content = content.replace(regex, exportLine);
+    messages.push(`Updated existing constant in ${constantsPath}`);
+  } else {
+    content += `\n${exportLine}\n`;
+    messages.push(`Appended constant to ${constantsPath}`);
+  }
+
+  await fs.writeFile(constantsPath, content);
+}
+
+/**
+ * Named Range設定の引数
+ */
 export interface SetupNamedRangeArgs {
+  /** スプレッドシートID */
   spreadsheetId: string;
+  /** 名前付き範囲の名前（例: "TODO_RANGE"） */
   rangeName: string;
+  /** A1記法の範囲（例: "Sheet1!A1:B10"） */
   range: string;
 }
 
-export async function setupNamedRange(args: SetupNamedRangeArgs) {
+/**
+ * スプレッドシートにNamed Rangeを設定し、constants.tsを更新
+ *
+ * @param args - スプレッドシートID、範囲名、範囲を含む引数
+ * @returns 実行結果（成功時は設定詳細、失敗時はエラー）
+ * @remarks 既存のNamed Rangeがある場合は削除して再作成。constants.tsも自動更新
+ */
+export async function setupNamedRange(
+  args: SetupNamedRangeArgs
+): Promise<ToolResult> {
   const messages: string[] = [];
+
   try {
     const { spreadsheetId, rangeName, range } = args;
     if (!spreadsheetId || !rangeName || !range) {
@@ -22,121 +246,38 @@ export async function setupNamedRange(args: SetupNamedRangeArgs) {
       `Setting up Named Range: ${chalk.bold(rangeName)} -> ${range}`
     );
 
-    // 1. Auth
-    const keyFile = path.join(process.cwd(), 'secrets/service-account.json');
-    const auth = new GoogleAuth({
-      keyFile,
-      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-    });
-    const sheets = google.sheets({ version: 'v4', auth });
+    const sheets = await getSheetsClient();
 
-    // 2. Update Spreadsheet
-    // First, delete if exists to update safely, or just add.
-    // 'addNamedRange' fails if it exists? No, it adds another with same name but different ID usually.
-    // Better to list and update/delete.
-
-    // Check existing
-    const { data: ss } = await sheets.spreadsheets.get({ spreadsheetId });
-    const existing = ss.namedRanges?.find(nr => nr.name === rangeName);
-
-    interface BatchUpdateRequest {
-      deleteNamedRange?: { namedRangeId: string };
-      addNamedRange?: {
-        namedRange: {
-          name: string;
-          range: {
-            sheetId: number;
-            startRowIndex: number;
-            endRowIndex: number;
-            startColumnIndex: number;
-            endColumnIndex: number;
-          };
-        };
-      };
-    }
-
-    const requests: BatchUpdateRequest[] = [];
-
-    if (existing && existing.namedRangeId) {
-      messages.push(
-        `Updating existing named range (ID: ${existing.namedRangeId})...`
-      );
-      requests.push({
-        deleteNamedRange: { namedRangeId: String(existing.namedRangeId) },
-      });
-    }
-
-    // Parse A1 notation (Simplified: assuming 'Sheet1!A1:B2' format)
-    // Note: The API requires GridRange (sheetId, startRowIndex, etc.) or we can use namedRange with range object.
-    // Actually, addNamedRange takes 'namedRange' object which has 'range' (GridRange) OR we can use the simplified ref if we look up sheetId.
-
-    // Wait, `addNamedRange` requires `range` property which is a `GridRange`.
-    // We need to convert 'Sheet1!A1:B2' to GridRange.
-    // ALTERNATIVE: Use Developer Metadata? No.
-    // EASIER PATH: User provides A1 notation, but API wants GridRange.
-    // However, checking the API docs: 'namedRange.range' is indeed GridRange.
-    // We need to look up the sheet ID from the sheet name in A1.
-
+    // A1記法をパース（例: "Sheet1!A1:B2" -> sheetName + cellRange）
     const rangeParts = range.split('!');
     const [sheetName, cellRange] = [
       rangeParts[0],
       rangeParts.slice(1).join('!'),
     ];
-    if (!sheetName || !cellRange)
+
+    if (!sheetName || !cellRange) {
       throw new Error('Range must be in format "SheetName!A1:B2"');
-
-    const sheet = ss.sheets?.find(s => s.properties?.title === sheetName);
-    if (!sheet || typeof sheet.properties?.sheetId !== 'number') {
-      throw new Error(`Sheet "${sheetName}" not found in spreadsheet.`);
     }
-    const sheetId = sheet.properties.sheetId;
 
-    // Simple A1 parser (very basic)
-    // A1:B2 -> startRow, endRow, startCol, endCol
-    // This is complex to implement robustly.
-    // MCP Prompt usually handles complexity, but here I am the code.
-    // Let's cheat: If the user provides A1, can we just set it?
-    // Unlike 'updateCells', 'addNamedRange' strictly needs GridRange.
-    // Plan B: Ask user (LLM) to provide structure? No, the tool input is simple string.
-    // Okay, I will implement a minimal A1 parser.
+    const sheetId = await getSheetId(sheets, spreadsheetId, sheetName);
+    const existingRangeId = await findExistingNamedRange(
+      sheets,
+      spreadsheetId,
+      rangeName
+    );
 
-    const parseA1 = (a1: string) => {
-      // A1:B2
-      const parts = a1.split(':');
-      const start = parts[0];
-      const end = parts[1] || start;
+    const requests: BatchUpdateRequest[] = [];
 
-      const parseCoord = (coord: string) => {
-        const colMatch = coord.match(/[A-Z]+/);
-        const rowMatch = coord.match(/[0-9]+/);
-        if (!colMatch || !rowMatch)
-          throw new Error(`Invalid coordinate: ${coord}`);
+    if (existingRangeId) {
+      messages.push(
+        `Updating existing named range (ID: ${existingRangeId})...`
+      );
+      requests.push({
+        deleteNamedRange: { namedRangeId: existingRangeId },
+      });
+    }
 
-        const colStr = colMatch[0];
-        let colIndex = 0;
-        for (let i = 0; i < colStr.length; i++) {
-          colIndex = colIndex * 26 + (colStr.charCodeAt(i) - 64);
-        }
-        return {
-          rowIndex: parseInt(rowMatch[0], 10) - 1,
-          colIndex: colIndex - 1,
-        };
-      };
-
-      const s = parseCoord(start);
-      const e = parseCoord(end);
-
-      return {
-        sheetId,
-        startRowIndex: s.rowIndex,
-        endRowIndex: e.rowIndex + 1,
-        startColumnIndex: s.colIndex,
-        endColumnIndex: e.colIndex + 1,
-      };
-    };
-
-    const gridRange = parseA1(cellRange);
-
+    const gridRange = parseA1Notation(cellRange, sheetId);
     requests.push({
       addNamedRange: {
         namedRange: {
@@ -151,34 +292,7 @@ export async function setupNamedRange(args: SetupNamedRangeArgs) {
       requestBody: { requests },
     });
 
-    // 3. Update Code (src/core/constants.ts)
-    const constantsPath = path.join(process.cwd(), 'src/core/constants.ts');
-    if (
-      await fs
-        .access(constantsPath)
-        .then(() => true)
-        .catch(() => false)
-    ) {
-      let content = await fs.readFile(constantsPath, 'utf8');
-      const exportLine = `export const ${rangeName} = '${range}';`;
-
-      // Regex replace or append
-      const regex = new RegExp(`export const ${rangeName} = .*;`);
-      if (regex.test(content)) {
-        content = content.replace(regex, exportLine);
-        messages.push(`Updated existing constant in ${constantsPath}`);
-      } else {
-        content += `\n${exportLine}\n`;
-        messages.push(`Appended constant to ${constantsPath}`);
-      }
-      await fs.writeFile(constantsPath, content);
-    } else {
-      messages.push(
-        chalk.yellow(
-          `⚠️  Constants file not found at ${constantsPath}. Skipping code update.`
-        )
-      );
-    }
+    await updateConstantsFile(rangeName, range, messages);
 
     messages.push(chalk.green('✅ Named Range setup complete!'));
 
