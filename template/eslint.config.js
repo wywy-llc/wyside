@@ -1,7 +1,7 @@
 import eslint from '@eslint/js';
 import prettierConfig from 'eslint-config-prettier';
 import prettierPlugin from 'eslint-plugin-prettier';
-import { dirname } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import tseslint from 'typescript-eslint';
 
@@ -21,9 +21,7 @@ export default [
       parserOptions: {
         ecmaVersion: 'latest',
         sourceType: 'module',
-        projectService: {
-          allowDefaultProject: ['*.js'],
-        },
+        project: join(__dirname, 'tsconfig.json'),
         tsconfigRootDir: __dirname,
       },
       globals: {
@@ -63,6 +61,10 @@ export default [
         },
       ],
     },
+  },
+  {
+    files: ['*.js', '*.mjs', '*.cjs'],
+    ...tseslint.configs.disableTypeChecked,
   },
   {
     ignores: ['node_modules/', 'dist/', 'build/'],
