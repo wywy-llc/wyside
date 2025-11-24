@@ -98,7 +98,10 @@
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.checked = todo.completed;
-            checkbox.onchange = () => toggle(todo.id);
+            checkbox.onclick = e => {
+              e.preventDefault();
+              toggle(todo.id);
+            };
 
             const span = document.createElement('span');
             span.className = 'todo-text';
@@ -167,18 +170,22 @@
         // Optimistic UI update
         const item = todoListEl.querySelector(`[data-id="${id}"]`);
         if (item) {
-          item.classList.toggle('completed');
           const checkbox = item.querySelector('input[type="checkbox"]');
-          if (checkbox) checkbox.checked = !checkbox.checked;
+          const isCompleted = item.classList.contains('completed');
+
+          // Toggle UI state
+          item.classList.toggle('completed');
+          if (checkbox) checkbox.checked = !isCompleted;
         }
 
         google.script.run
-          .withSuccessHandler(() => {
-            // No full reload needed - optimistic update already applied
-          })
           .withFailureHandler(err => {
-            // Rollback on error
-            if (item) item.classList.toggle('completed');
+            if (item) {
+              const checkbox = item.querySelector('input[type="checkbox"]');
+              const isCompleted = item.classList.contains('completed');
+              item.classList.toggle('completed');
+              if (checkbox) checkbox.checked = !isCompleted;
+            }
             handleError(err);
             load(); // Sync with server
           })
@@ -194,9 +201,6 @@
         if (item) item.remove();
 
         google.script.run
-          .withSuccessHandler(() => {
-            // Already removed optimistically
-          })
           .withFailureHandler(err => {
             // Rollback on error
             if (removedItem && item && item.parentNode) {
