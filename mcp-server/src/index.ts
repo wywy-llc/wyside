@@ -26,9 +26,9 @@ import {
   type SetupNamedRangeArgs,
 } from './tools/sheets-tools.js';
 import {
-  syncLocalSecrets,
-  type SyncLocalSecretsArgs,
-} from './tools/sync-local-secrets.js';
+  syncSecretsFromGcpToLocal,
+  type SyncSecretsFromGcpToLocalArgs,
+} from './tools/sync-secrets-from-gcp-to-local.js';
 
 // Load environment variables from .env
 config();
@@ -159,8 +159,8 @@ server.setRequestHandler(CallToolRequestSchema, async request => {
   try {
     switch (name) {
       case 'sync_local_secrets':
-        return await syncLocalSecrets(
-          (args || {}) as unknown as SyncLocalSecretsArgs
+        return await syncSecretsFromGcpToLocal(
+          (args || {}) as unknown as SyncSecretsFromGcpToLocalArgs
         );
       case 'scaffold_feature':
         return await scaffoldFeature(
@@ -207,7 +207,7 @@ async function main() {
     if (process.env.TEST_PROJECT_ID) {
       console.error('\n📋 Testing sync_local_secrets...');
       try {
-        const result = await syncLocalSecrets({
+        const result = await syncSecretsFromGcpToLocal({
           projectId: process.env.TEST_PROJECT_ID,
           spreadsheetId: process.env.TEST_SPREADSHEET_ID,
         });

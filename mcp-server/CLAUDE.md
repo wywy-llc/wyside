@@ -32,7 +32,7 @@
   - Defines server capabilities and tool schemas.
   - Routes requests to specific tool handlers.
 - **Tools (`src/tools/`):**
-  - `sync-local-secrets.ts`: GCP & Env setup.
+  - `sync-secrets-from-gcp-to-local.ts`: GCP & Env setup.
   - `scaffold-feature.ts`: Template-based code gen.
   - `setup-named-range.ts`: Sheets API wrapper.
 - **Templates (`src/templates/`):**

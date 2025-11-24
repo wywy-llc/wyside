@@ -22,9 +22,9 @@ import {
   type SetupNamedRangeArgs,
 } from '../src/tools/sheets-tools.js';
 import {
-  syncLocalSecrets,
-  type SyncLocalSecretsArgs,
-} from '../src/tools/sync-local-secrets.js';
+  syncSecretsFromGcpToLocal,
+  type SyncSecretsFromGcpToLocalArgs,
+} from '../src/tools/sync-secrets-from-gcp-to-local.js';
 
 // Load .env
 config();
@@ -59,12 +59,12 @@ Examples:
 
     switch (toolName) {
       case 'sync_local_secrets': {
-        const params: SyncLocalSecretsArgs = {
+        const params: SyncSecretsFromGcpToLocalArgs = {
           projectId: args[1],
           spreadsheetId: args[2],
         };
         console.log('Running sync_local_secrets with:', params);
-        result = await syncLocalSecrets(params);
+        result = await syncSecretsFromGcpToLocal(params);
         break;
       }
 
