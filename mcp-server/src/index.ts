@@ -53,11 +53,16 @@ const TOOL_DEFINITIONS = [
           type: 'string',
           description: 'GCP Project ID (interactive if omitted)',
         },
-        spreadsheetId: {
+        spreadsheetIdDev: {
           type: 'string',
-          description: 'Spreadsheet ID (creates new if omitted)',
+          description: 'Development Spreadsheet ID (required)',
+        },
+        spreadsheetIdProd: {
+          type: 'string',
+          description: 'Production Spreadsheet ID (optional)',
         },
       },
+      required: ['spreadsheetIdDev'],
     },
   },
   {
@@ -234,13 +239,15 @@ server.setRequestHandler(
  * @remarks TEST_PROJECT_ID環境変数が設定されている場合にのみ実行
  */
 async function testSyncSecrets(): Promise<void> {
-  if (!process.env.TEST_PROJECT_ID) return;
+  if (!process.env.TEST_PROJECT_ID || !process.env.TEST_SPREADSHEET_ID_DEV)
+    return;
 
   console.error('\n📋 Testing sync_secrets_from_gcp_to_local...');
   try {
     const result = await syncSecretsFromGcpToLocal({
       projectId: process.env.TEST_PROJECT_ID,
-      spreadsheetId: process.env.TEST_SPREADSHEET_ID,
+      spreadsheetIdDev: process.env.TEST_SPREADSHEET_ID_DEV,
+      spreadsheetIdProd: process.env.TEST_SPREADSHEET_ID_PROD,
     });
     console.error('✅ Test result:', JSON.stringify(result, null, 2));
   } catch (error) {

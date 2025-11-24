@@ -167,13 +167,15 @@ async function createServiceAccountKey(
  * .envファイルの更新
  *
  * @param projectId - GCPプロジェクトID
- * @param spreadsheetId - スプレッドシートID（オプション）
+ * @param spreadsheetIdDev - 開発用スプレッドシートID（オプション）
+ * @param spreadsheetIdProd - 本番用スプレッドシートID（オプション）
  * @param messages - 実行ログを格納する配列
  * @remarks 既存の.envファイルを読み込み、必要な環境変数を追加または更新
  */
 async function updateEnvFile(
   projectId: string,
-  spreadsheetId: string | undefined,
+  spreadsheetIdDev: string | undefined,
+  spreadsheetIdProd: string | undefined,
   messages: string[]
 ): Promise<void> {
   const envPath = path.join(process.cwd(), '.env');
@@ -187,8 +189,12 @@ async function updateEnvFile(
     GOOGLE_APPLICATION_CREDENTIALS: './secrets/service-account.json',
   };
 
-  if (spreadsheetId) {
-    updates.SPREADSHEET_ID = spreadsheetId;
+  if (spreadsheetIdDev) {
+    updates.APP_SPREADSHEET_ID_1_DEV = spreadsheetIdDev;
+  }
+
+  if (spreadsheetIdProd) {
+    updates.APP_SPREADSHEET_ID_1_PROD = spreadsheetIdProd;
   }
 
   let newEnvContent = envContent;
@@ -207,13 +213,14 @@ async function updateEnvFile(
 
 export interface SyncSecretsFromGcpToLocalArgs {
   projectId?: string;
-  spreadsheetId?: string;
+  spreadsheetIdDev: string;
+  spreadsheetIdProd?: string;
 }
 
 /**
  * GCPからローカル開発環境へシークレット設定を同期
  *
- * @param args - プロジェクトIDとスプレッドシートIDを含む設定オブジェクト
+ * @param args - プロジェクトIDと開発用/本番用スプレッドシートIDを含む設定オブジェクト
  * @returns 実行結果メッセージ
  * @remarks GCP APIの有効化、サービスアカウント作成、キー生成、.env更新を一括実行
  */
@@ -230,7 +237,12 @@ export async function syncSecretsFromGcpToLocal(
     await enableGoogleApis(projectId, messages);
     const saEmail = await ensureServiceAccount(projectId, messages);
     await createServiceAccountKey(saEmail, projectId, messages);
-    await updateEnvFile(projectId, args.spreadsheetId, messages);
+    await updateEnvFile(
+      projectId,
+      args.spreadsheetIdDev,
+      args.spreadsheetIdProd,
+      messages
+    );
 
     messages.push(chalk.green('✅ Local secrets setup complete!'));
     messages.push(

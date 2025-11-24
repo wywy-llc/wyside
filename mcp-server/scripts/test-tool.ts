@@ -38,7 +38,7 @@ async function main() {
 Usage: npx tsx scripts/test-tool.ts <tool-name> [args...]
 
 Available tools:
-  sync_secrets_from_gcp_to_local <projectId> [spreadsheetId]
+  sync_secrets_from_gcp_to_local <projectId> [spreadsheetIdDev] [spreadsheetIdProd]
   scaffold_feature <featureName> <operation1,operation2,...>
   setup_named_range <spreadsheetId> <rangeName> <range>
   drive_create_folder <folderName> [parentId]
@@ -46,6 +46,7 @@ Available tools:
 
 Examples:
   npx tsx scripts/test-tool.ts sync_secrets_from_gcp_to_local my-project-123
+  npx tsx scripts/test-tool.ts sync_secrets_from_gcp_to_local my-project-123 1ABC_DEV 1XYZ_PROD
   npx tsx scripts/test-tool.ts scaffold_feature Todo "create,read,update,delete"
   npx tsx scripts/test-tool.ts setup_named_range 1ABC123 TODO_RANGE "Sheet1!A2:E"
   npx tsx scripts/test-tool.ts drive_create_folder "Test Folder"
@@ -61,7 +62,8 @@ Examples:
       case 'sync_secrets_from_gcp_to_local': {
         const params: SyncSecretsFromGcpToLocalArgs = {
           projectId: args[1],
-          spreadsheetId: args[2],
+          spreadsheetIdDev: args[2],
+          spreadsheetIdProd: args[3],
         };
         console.log('Running sync_secrets_from_gcp_to_local with:', params);
         result = await syncSecretsFromGcpToLocal(params);
