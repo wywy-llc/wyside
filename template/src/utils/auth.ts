@@ -1,4 +1,4 @@
-import { google as googleApi } from 'googleapis';
+import { GoogleAuth } from 'google-auth-library';
 import { isGasEnvironment } from '../config.js';
 
 // Token cache with expiration
@@ -11,8 +11,7 @@ interface CachedToken {
 const tokenCache = new Map<string, CachedToken>();
 
 // Singleton GoogleAuth client for Node.js environment
-let googleAuthClient: InstanceType<typeof googleApi.auth.GoogleAuth> | null =
-  null;
+let googleAuthClient: GoogleAuth | null = null;
 
 // Token TTL: 45 minutes (Google tokens typically valid for 1 hour, use 45 min for safety)
 const TOKEN_TTL_MS = 45 * 60 * 1000;
@@ -93,7 +92,7 @@ export const getOAuthToken = async (scopes: string[]): Promise<string> => {
     // Node.js環境: Service Account認証
     // Reuse GoogleAuth client as singleton
     if (!googleAuthClient) {
-      googleAuthClient = new googleApi.auth.GoogleAuth({
+      googleAuthClient = new GoogleAuth({
         keyFile:
           process.env.GOOGLE_APPLICATION_CREDENTIALS ||
           './secrets/service-account.json',
