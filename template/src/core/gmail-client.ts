@@ -1,64 +1,46 @@
-import { google as googleApi } from 'googleapis';
-
-type Environment = 'gas' | 'node';
+import { getOAuthToken } from '../utils/auth.js';
+import { Fetch } from '../utils/fetch.js';
 
 /**
- * UniversalGmailClient - GAS/Node.js両対応のGmailクライアント
+ * Gmail client with methods for interacting with Gmail API
  *
- * 🚨 重要: REST APIのみ使用（GmailAppは使用しない）
+ * 🚨 重要: client.tsと完全に同じIIFEパターンで実装
  * 認証部分のみ環境依存、それ以外は完全に同一のコード
+ *
+ * @example
+ * ```typescript
+ * import { GmailClient } from './core/gmail-client.js';
+ *
+ * await GmailClient.sendEmail('user@example.com', 'Subject', 'Body text');
+ * ```
  */
-export class UniversalGmailClient {
-  private env: Environment;
-  private authToken: string | null = null;
-
-  constructor() {
-    this.env = this.detectEnvironment();
-  }
-
-  private detectEnvironment(): Environment {
-    // GAS環境判定
-    return typeof ScriptApp !== 'undefined' ? 'gas' : 'node';
-  }
-
+export const GmailClient = ((authToken: string | null = null) => {
   /**
-   * 環境に応じた認証トークンを取得
-   * GAS: ScriptApp.getOAuthToken()
-   * Node.js: googleapis経由でService Account認証
+   * 環境に応じた認証トークンを取得（キャッシュ機能付き）
    */
-  private async getAuthToken(): Promise<string> {
-    if (this.authToken) return this.authToken;
+  const getAuthToken = async (): Promise<string> => {
+    if (authToken) return authToken;
 
-    if (this.env === 'gas') {
-      // GAS環境
-      return ScriptApp.getOAuthToken();
-    } else {
-      // Node.js環境: Service Account認証
-      const auth = new googleApi.auth.GoogleAuth({
-        keyFile:
-          process.env.GOOGLE_APPLICATION_CREDENTIALS ||
-          './secrets/service-account.json',
-        scopes: [
-          'https://www.googleapis.com/auth/gmail.send',
-          'https://www.googleapis.com/auth/gmail.readonly',
-        ],
-      });
-
-      const client = await auth.getClient();
-      const tokenResponse = await client.getAccessToken();
-      this.authToken = tokenResponse.token!;
-      return this.authToken;
-    }
-  }
+    authToken = await getOAuthToken([
+      'https://www.googleapis.com/auth/gmail.send',
+      'https://www.googleapis.com/auth/gmail.readonly',
+    ]);
+    return authToken;
+  };
 
   /**
+   * ✅ GASとNode.jsで完全に同一の実装（内部でFetch.requestを使用）
    * メール送信
    * @param to 宛先メールアドレス
    * @param subject 件名
    * @param body 本文（プレーンテキスト）
    */
-  async sendEmail(to: string, subject: string, body: string): Promise<void> {
-    const token = await this.getAuthToken();
+  const sendEmail = async (
+    to: string,
+    subject: string,
+    body: string
+  ): Promise<void> => {
+    const token = await getAuthToken();
 
     // RFC 2822形式のメールメッセージを作成
     const message = [
@@ -75,7 +57,7 @@ export class UniversalGmailClient {
       .replace(/\//g, '_')
       .replace(/=+$/, '');
 
-    const response = await fetch(
+    const response = await Fetch.request(
       'https://gmail.googleapis.com/gmail/v1/users/me/messages/send',
       {
         method: 'POST',
@@ -93,5 +75,9 @@ export class UniversalGmailClient {
         `Gmail API Error [${response.status}]: ${data.error?.message || 'Unknown'}`
       );
     }
-  }
-}
+  };
+
+  return {
+    sendEmail,
+  } as const;
+})();

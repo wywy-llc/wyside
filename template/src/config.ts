@@ -7,6 +7,26 @@
  */
 
 /**
+ * Runtime Environment Detection
+ */
+
+/**
+ * Check if code is running in Google Apps Script environment
+ * @returns true if running in GAS, false otherwise
+ */
+export function isGasEnvironment(): boolean {
+  return typeof ScriptApp !== 'undefined';
+}
+
+/**
+ * Check if code is running in Node.js environment
+ * @returns true if running in Node.js, false otherwise
+ */
+export function isNodeEnvironment(): boolean {
+  return typeof ScriptApp === 'undefined';
+}
+
+/**
  * Spreadsheet Type Enumeration
  *
  * Maps to APP_SPREADSHEET_ID_N_DEV/PROD environment variables

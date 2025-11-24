@@ -1,7 +1,11 @@
+import { SheetsClientInstance } from '../../core/client.js';
+import { {{featureName}} } from '../../core/types.js';
 
-import { UniversalSheetsClient } from '../../core/client.js'; import {
-{{featureName}}
-} from '../../core/types.js'; export class Universal{{featureName}}Repo {
-constructor( private client: UniversalSheetsClient, private spreadsheetId:
-string ) {} // TODO: Implement methods using client.batchUpdate /
-client.batchGet }
+export class Universal{{featureName}}Repo {
+  constructor(
+    private client: SheetsClientInstance,
+    private spreadsheetId: string
+  ) {}
+
+  // TODO: Implement methods using client.batchUpdate / client.batchGet
+}

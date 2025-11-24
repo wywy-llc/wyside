@@ -96,6 +96,7 @@ wyside/
 
 - ✅ `ScriptApp.getOAuthToken()` - ONLY for obtaining OAuth tokens for REST API calls
 - ✅ `UrlFetchApp.fetch()` - For making HTTP requests to Google APIs
+- ✅ `UrlFetchApp.fetchAll(requests)` - For making parallel HTTP requests to Google APIs
 - ✅ `SpreadsheetApp.getUi()` - ONLY in UI-related functions (`onOpen()`, etc.)
 - ✅ `HtmlService` - ONLY for serving HTML in GAS environment
 

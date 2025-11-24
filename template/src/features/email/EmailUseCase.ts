@@ -1,32 +1,24 @@
-import { UniversalGmailClient } from '../../core/gmail-client.js';
-import { UniversalTodoRepo } from '../todo/UniversalTodoRepo.js';
+import { GmailClient } from '@/core/gmail-client';
+import { UniversalTodoRepo } from '../todo/UniversalTodoRepo';
 
-export class EmailUseCase {
-  constructor(
-    private gmailClient: UniversalGmailClient,
-    private todoRepo: UniversalTodoRepo
-  ) {}
-
-  /**
-   * TODOリストをメール送信
-   * @param to 宛先メールアドレス
-   */
-  async sendTodosEmail(to: string): Promise<void> {
-    // TODOリスト取得
-    const todos = await this.todoRepo.getTodos();
-
-    // メール本文作成
-    const subject = '📋 TODO List';
-    const body = this.formatTodosAsEmail(todos);
-
-    // メール送信
-    await this.gmailClient.sendEmail(to, subject, body);
-  }
-
+/**
+ * Email use case with methods for sending TODO emails
+ *
+ * 🚨 重要: TodoUseCaseと同じIIFEパターンで実装
+ * 環境非依存な実装を提供
+ *
+ * @example
+ * ```typescript
+ * import { EmailUseCase } from './features/email/EmailUseCase.js';
+ *
+ * await EmailUseCase.sendTodosEmail('user@example.com', spreadsheetId);
+ * ```
+ */
+export const EmailUseCase = (() => {
   /**
    * TODOリストをメール本文形式にフォーマット
    */
-  private formatTodosAsEmail(
+  const formatTodosAsEmail = (
     todos: Array<{
       id: string;
       title: string;
@@ -34,7 +26,7 @@ export class EmailUseCase {
       createdAt: string;
       updatedAt: string;
     }>
-  ): string {
+  ): string => {
     if (todos.length === 0) {
       return 'No TODOs found.\n\n---\nSent from Wyside TODO App';
     }
@@ -66,5 +58,31 @@ export class EmailUseCase {
     body += '---\nSent from Wyside TODO App';
 
     return body;
-  }
-}
+  };
+
+  /**
+   * ✅ GASとNode.jsで完全に同一の実装
+   * TODOリストをメール送信
+   * @param to 宛先メールアドレス
+   * @param spreadsheetId スプレッドシートID
+   */
+  const sendTodosEmail = async (
+    to: string,
+    spreadsheetId: string
+  ): Promise<void> => {
+    // TODOリスト取得
+    const todoRepo = UniversalTodoRepo.create(spreadsheetId);
+    const todos = await todoRepo.getTodos();
+
+    // メール本文作成
+    const subject = '📋 TODO List';
+    const body = formatTodosAsEmail(todos);
+
+    // メール送信
+    await GmailClient.sendEmail(to, subject, body);
+  };
+
+  return {
+    sendTodosEmail,
+  } as const;
+})();
