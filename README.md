@@ -43,19 +43,19 @@ To achieve true local development, wyside mandates a strict architectural patter
 
 ## Quick Start
 
-The simplest way to get started with a fully configured environment (including GCP setup) is:
-
-```bash
-npx @wywyjp/wyside init --setup-gcp
-```
-
-The `--setup-gcp` flag triggers the automated AI-driven setup process which handles:
+you need to complete the following prerequisites (including creating a Service Account and getting its key):
 
 1. Verifying authentication (`gcloud`).
 2. Selecting/Creating a Google Cloud Project.
 3. Enabling necessary APIs (Sheets, Drive, Gmail).
 4. Creating a Service Account & downloading keys (`secrets/service-account.json`).
-5. Configuring environment variables.
+5. Configuring environment variables: Create a `template/.env` file based on `template/.env.example` and configure the necessary environment variables, especially `GOOGLE_APPLICATION_CREDENTIALS` to point to the downloaded service account key, and also Spreadsheet IDs and GCP project ID.
+
+Once these prerequisites are completed, execute the following command:
+
+```bash
+npx @wywyjp/wyside init --setup-gcp
+```
 
 ### Debugging Initialization
 
