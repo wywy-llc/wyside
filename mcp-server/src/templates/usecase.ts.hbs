@@ -1,8 +1,97 @@
-import { Universal{{featureName}}Repo } from './Universal{{featureName}}Repo.js';
+import { getSpreadsheetId, SpreadsheetType } from '@/config.js';
 import { {{featureName}} } from '../../core/types.js';
+import { Universal{{featureName}}Repo } from './Universal{{featureName}}Repo.js';
 
-export class {{featureName}}UseCase {
-  constructor(private repo: Universal{{featureName}}Repo) {}
+/**
+ * {{featureName}} use case with methods for managing {{featureName}}s
+ *
+ * 🚨 重要: client.tsと完全に同じIIFEパターンで実装
+ * 環境非依存な実装を提供
+ *
+ * @example
+ * ```typescript
+ * import { {{featureName}}UseCase } from './features/{{featureNameCamel}}/{{featureName}}UseCase.js';
+ *
+{{#if hasSchema}}
+ * const items = await {{featureName}}UseCase.list();
+ * await {{featureName}}UseCase.create({ title: 'Example' });
+{{else}}
+ * // TODO: Add example usage
+{{/if}}
+ * ```
+ */
+export const {{featureName}}UseCase = (() => {
+{{#if hasSchema}}
+  // TODO: Update SpreadsheetType to match your feature
+  const spreadsheetId = getSpreadsheetId(SpreadsheetType.TODOS);
 
-  // TODO: Implement business logic
-}
+  // Cache repository instance to avoid redundant creation
+  const repo = Universal{{featureName}}Repo.create(spreadsheetId);
+
+  /**
+   * ✅ GASとNode.jsで完全に同一の実装
+   */
+  const list = async (): Promise<{{featureName}}[]> => {
+    return repo.getAll();
+  };
+
+  const create = async (data: Partial<{{featureName}}>): Promise<{{featureName}}> => {
+{{#if validation}}
+{{validation}}
+{{/if}}
+    return repo.create(data);
+  };
+
+  const update = async (id: string, updates: Partial<{{featureName}}>): Promise<void> => {
+    await repo.update(id, updates);
+  };
+
+  const remove = async (id: string): Promise<void> => {
+    await repo.remove(id);
+  };
+
+  return {
+    list,
+    create,
+    update,
+    remove,
+  } as const;
+{{else}}
+  // TODO: Update SpreadsheetType to match your feature
+  // const spreadsheetId = getSpreadsheetId(SpreadsheetType.YOUR_TYPE);
+
+  // Cache repository instance to avoid redundant creation
+  // const repo = Universal{{featureName}}Repo.create(spreadsheetId);
+
+  /**
+   * ✅ GASとNode.jsで完全に同一の実装
+   */
+  // TODO: Implement use case methods
+  // Example pattern:
+  //
+  // const list = async (): Promise<{{featureName}}[]> => {
+  //   return repo.getAll();
+  // };
+  //
+  // const create = async (data: Partial<{{featureName}}>): Promise<{{featureName}}> => {
+  //   if (!data.title) throw new Error('Title is required');
+  //   return repo.create(data);
+  // };
+  //
+  // const update = async (id: string, updates: Partial<{{featureName}}>): Promise<void> => {
+  //   await repo.update(id, updates);
+  // };
+  //
+  // const remove = async (id: string): Promise<void> => {
+  //   await repo.remove(id);
+  // };
+
+  return {
+    // TODO: Return methods here
+    // list,
+    // create,
+    // update,
+    // remove,
+  } as const;
+{{/if}}
+})();

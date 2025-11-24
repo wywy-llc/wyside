@@ -3,6 +3,21 @@ import fs from 'fs/promises';
 import Handlebars from 'handlebars';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import {
+  type FeatureSchema,
+  generateTypeDefinition,
+  generateRowToObject,
+  generateObjectToRow,
+  generateColumnRange,
+  getFieldCount,
+  generateValidation,
+  generateDefaults,
+} from './schema-generator.js';
+import {
+  generateOperationsCodes,
+  generateExportsList,
+  getAllOperationIds,
+} from './operation-catalog.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,6 +41,8 @@ export interface ScaffoldFeatureArgs {
   featureName: string;
   /** 生成する操作のリスト（例: ["create", "read", "update"]） */
   operations?: string[];
+  /** スキーマ定義（オプション） */
+  schema?: FeatureSchema;
 }
 
 /**
@@ -149,7 +166,7 @@ export async function scaffoldFeature(
   const messages: string[] = [];
 
   try {
-    const { featureName, operations } = args;
+    const { featureName, operations, schema } = args;
     if (!featureName) throw new Error('featureName is required');
 
     const names = convertFeatureName(featureName);
@@ -161,10 +178,57 @@ export async function scaffoldFeature(
 
     const templates = await loadTemplates(templatesDir);
 
+    // 操作リストの処理（未指定時は全操作、'all'指定時も全操作）
+    let operationIds = operations || [];
+    if (operationIds.length === 0 || operationIds.includes('all')) {
+      operationIds = getAllOperationIds();
+      messages.push(
+        `Using all available operations: ${operationIds.join(', ')}`
+      );
+    } else {
+      messages.push(`Using operations: ${operationIds.join(', ')}`);
+    }
+
+    // 操作コードを生成
+    const operationContext = {
+      featureName: names.pascal,
+      featureNameCamel: names.camel,
+      schema,
+      rangeName:
+        schema?.rangeName ||
+        (schema ? `${names.pascal.toUpperCase()}_RANGE` : undefined),
+    };
+
+    const operationCodes = generateOperationsCodes(
+      operationIds,
+      operationContext
+    );
+    const exportsList = generateExportsList(operationIds);
+
+    // スキーマからコード生成データを準備
+    const schemaData = schema
+      ? {
+          hasSchema: true,
+          typeDefinition: generateTypeDefinition(names.pascal, schema),
+          rowToObject: generateRowToObject(names.pascal, schema),
+          objectToRow: generateObjectToRow(names.camel, schema),
+          columnRange: generateColumnRange(schema),
+          fieldCount: getFieldCount(schema),
+          validation: generateValidation(names.camel, schema),
+          defaults: generateDefaults(schema),
+          range: schema.range,
+          rangeName: schema.rangeName || `${names.pascal.toUpperCase()}_RANGE`,
+          operationCodes: operationCodes.join('\n'),
+          exportsList,
+        }
+      : { hasSchema: false, operationCodes: '', exportsList: '' };
+
     const templateData = {
       featureName: names.pascal,
-      operations: operations || [],
+      featureNameCamel: names.camel,
+      operations: operationIds,
       timestamp: new Date().toISOString(),
+      ...schemaData,
     };
 
     await writeGeneratedFiles(
@@ -178,6 +242,7 @@ export async function scaffoldFeature(
     messages.push(
       chalk.green(`✅ Feature ${names.pascal} scaffolded successfully.`)
     );
+    messages.push(`📦 Generated ${operationIds.length} operations`);
 
     return {
       content: [{ type: 'text', text: messages.join('\n') }],

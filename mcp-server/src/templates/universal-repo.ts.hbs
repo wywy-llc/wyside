@@ -1,11 +1,82 @@
-import { SheetsClientInstance } from '../../core/client.js';
+import { SheetsClient } from '@/core/client.js';
+{{#if hasSchema}}
+{{#if rangeName}}
+import { {{rangeName}} } from '../../core/constants.js';
+{{/if}}
+{{/if}}
 import { {{featureName}} } from '../../core/types.js';
 
-export class Universal{{featureName}}Repo {
-  constructor(
-    private client: SheetsClientInstance,
-    private spreadsheetId: string
-  ) {}
+// Cache crypto availability check
+let hasCrypto: boolean | null = null;
 
-  // TODO: Implement methods using client.batchUpdate / client.batchGet
+// Utility for UUID
+function generateUuid(): string {
+  if (typeof Utilities !== 'undefined') {
+    return Utilities.getUuid();
+  }
+
+  // Cache crypto check to avoid repeated typeof checks
+  if (hasCrypto === null) {
+    hasCrypto =
+      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function';
+  }
+
+  if (hasCrypto) {
+    return crypto.randomUUID();
+  }
+
+  // Fallback for environments without crypto
+  throw new Error('UUID generation not available in this environment');
 }
+
+/**
+ * Universal {{featureName}} repository factory for GAS/Node.js environments
+ *
+ * 🚨 重要: client.tsのSheetsClientを直接使用
+ * SheetsClientはIIFEパターンで既にインスタンス化されているため、直接メソッドを呼び出す
+ *
+ * @example
+ * ```typescript
+ * import { Universal{{featureName}}Repo } from './features/{{featureNameCamel}}/Universal{{featureName}}Repo.js';
+ *
+ * const repo = Universal{{featureName}}Repo.create(spreadsheetId);
+{{#if hasSchema}}
+ * const items = await repo.getAll();
+ * await repo.create({ title: 'Example' });
+{{else}}
+ * // TODO: Add example usage
+{{/if}}
+ * ```
+ */
+export const Universal{{featureName}}Repo = (() => {
+  /**
+   * ✅ GASとNode.jsで完全に同一の実装
+   */
+  const create = (spreadsheetId: string) => {
+{{#if hasSchema}}
+    // Conversion helpers
+{{rowToObject}}
+
+{{objectToRow}}
+
+    // Repository operations
+{{operationCodes}}
+
+    return {
+      {{exportsList}}
+    } as const;
+{{else}}
+    // TODO: Implement operations using SheetsClient
+    // Available operations:
+    {{#each operations}}
+    // - {{this}}
+    {{/each}}
+
+    return {
+      // TODO: Return methods here
+    } as const;
+{{/if}}
+  };
+
+  return { create } as const;
+})();
