@@ -265,11 +265,6 @@ export default defineConfig({
 **`src/core/client.ts`**
 
 ```typescript
-/**
- * Copyright 2025 wywy LLC
- * Licensed under the Apache License, Version 2.0
- */
-
 type Environment = 'gas' | 'node';
 
 export class UniversalSheetsClient {
@@ -390,11 +385,6 @@ export class UniversalSheetsClient {
 **`src/core/types.ts`**
 
 ```typescript
-/**
- * Copyright 2025 wywy LLC
- * Licensed under the Apache License, Version 2.0
- */
-
 export interface Todo {
   id: string;
   title: string;
@@ -416,11 +406,6 @@ export interface SheetsApiResponse {
 **`src/core/constants.ts`**
 
 ```typescript
-/**
- * Copyright 2025 wywy LLC
- * Licensed under the Apache License, Version 2.0
- */
-
 export const TODO_RANGE = 'Todos!A2:E';
 export const TODO_HEADER_RANGE = 'Todos!A1:E1';
 export const SHEET_NAMES = { TODOS: 'Todos' } as const;

@@ -1,22 +1,6 @@
-<!--
-Copyright 2025 wywy LLC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-you may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
 # wyside
 
-- **Note**: This is a community-maintained fork of [@wywyjp/wyside](https://github.com/google/aside).
+- **Note**: This is a fork of [@google/aside](https://github.com/google/aside).
 - The original project is created by Google but is not officially supported.
 
 ## Overview
@@ -35,33 +19,64 @@ Here are the main features:
 
 - **Testing**
 
-  Use Jest to test your code before deploying
+  Use Vitest to test your code before deploying
 
 - **Multiple Environments**
 
   Seemlessly switch between `dev` and `prod` environments to push your code to
 
-## Getting Started
+- **Unified Architecture (AI Native)**
 
-The simplest way to get started is:
+  Generate "Test-Separated Hybrid" code that runs on both GAS and Node.js using the built-in MCP server.
+
+### GAS/Node 共通のグローバル公開ルール
+
+Apps Script の UI/トリガー関数を公開するときは、環境ごとに `global` の有無が異なるため、次のパターンで安全に束縛してください。
+
+```ts
+const globalScope =
+  typeof globalThis !== 'undefined'
+    ? globalThis
+    : typeof global !== 'undefined'
+      ? global
+      : {};
+
+globalScope.onOpen = onOpen;
+```
+
+この形にしておくと、Node でも GAS でも `ReferenceError` を起こさずメニュー作成などが機能します。
+
+## Quick Start
+
+The simplest way to get started with a fully configured environment (including GCP setup) is:
 
 ```bash
-npx @wywyjp/wyside init
+npx @wywyjp/wyside init --setup-gcp
 ```
+
+The `--setup-gcp` flag triggers the automated setup process which handles:
+
+1. Verify `gcloud auth login`
+2. Select/create GCP project
+3. Enable `sheets.googleapis.com`, `drive.googleapis.com`, `gmail.googleapis.com`
+4. Create Service Account & download key
+5. Place `secrets/service-account.json`
+6. Create or configure Spreadsheet sharing
+7. Generate `.env` file
 
 To inspect initialization issues with verbose debug logs:
 
 ```bash
-WYSIDE_DEBUG=1 npx @wywyjp/wyside init
+WYSIDE_DEBUG=1 npx @wywyjp/wyside init --setup-gcp
 ```
 
 ## What it does
 
-After running the `init` command above, ASIDE will go ahead and do the following:
+After running the `init` command above, wyside will go ahead and do the following:
 
 - **Add configuration files**
 
-  E.g. for ESLint, Prettier, Jest, ...
+  E.g. for ESLint, Prettier, Vitest, ...
 
 - **Set convenience scripts in package.json**
 
@@ -73,56 +88,7 @@ After running the `init` command above, ASIDE will go ahead and do the following
 
 - **Set up clasp**
 
-  ASIDE is using [clasp](https://github.com/google/clasp) to pull and push code from and to Apps Script
-
-- **(Optionally) Create an Angular Material UI**
-
-  ASIDE will run the necessary commands to create an Angular application with Angular Material components, if the option is chosen
-
-## UI Development
-
-If you chose to create an Angular UI during initialization, you can find the source code in `src/ui`. This is a standard Angular application.
-
-### Development
-
-To run the UI locally during development:
-
-```bash
-npm run serve-ui
-```
-
-This will start the Angular development server (usually at <http://localhost:4200>).
-
-### Deployment
-
-To deploy your project including the UI to Google Apps Script:
-
-```bash
-npm run deploy
-```
-
-This command automates the following steps:
-
-1. Builds the Angular application.
-2. Converts the build artifacts into GAS-compatible HTML files (using `deploy-ui.mjs`).
-3. Pushes the code to your Apps Script project using `clasp`.
-
-### Server-side Integration
-
-Ensure your GAS server-side code (e.g., `src/index.ts`) is set up to serve the UI. You typically need a `doGet` function and an `include` helper:
-
-```typescript
-function doGet() {
-  return HtmlService.createTemplateFromFile('ui')
-    .evaluate()
-    .setTitle('My App')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-}
-
-function include(filename: string) {
-  return HtmlService.createHtmlOutputFromFile(filename).getContent();
-}
-```
+  wyside is using [clasp](https://github.com/google/clasp) to pull and push code from and to Apps Script
 
 ## Options
 
@@ -147,3 +113,7 @@ You can provide the `init` command with some convenience options:
 - `--script-prod`
 
   Set Script ID for production environment without being asked for it
+
+- `--setup-gcp`
+
+  Run the automated Google Cloud Platform setup (APIs, Service Account, Secrets) using the embedded MCP server.

@@ -36,6 +36,22 @@
     "dist/",
     "build/",
     "template/",
-    "template-ui/"
+    "template-ui/",
+    "mcp-server/"
+  ],
+  "overrides": [
+    {
+      "files": ["*.mjs", "*.cjs", "*.js"],
+      "parserOptions": {
+        "project": null
+      },
+      "extends": [
+        "eslint:recommended",
+        "prettier"
+      ],
+      "rules": {
+        "prettier/prettier": "error"
+      }
+    }
   ]
 }

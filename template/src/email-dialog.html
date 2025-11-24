@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Send Todo List Email</title>
+    <base target="_top" />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        margin: 0;
+      }
+      .container {
+        max-width: 400px;
+        margin: 0 auto;
+      }
+      .form-group {
+        margin-bottom: 15px;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+      }
+      input[type='email'] {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+      }
+      input[type='email']:focus {
+        outline: 2px solid #4285f4;
+        outline-offset: 2px;
+      }
+      .button-group {
+        margin-top: 20px;
+        text-align: right;
+        position: relative;
+      }
+      button {
+        padding: 8px 16px;
+        margin-left: 8px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        position: relative;
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      button:focus {
+        outline: 2px solid #4285f4;
+        outline-offset: 2px;
+      }
+      .btn-primary {
+        background-color: #4285f4;
+        color: white;
+      }
+      .btn-primary:hover:not(:disabled) {
+        background-color: #357ae8;
+      }
+      .btn-secondary {
+        background-color: #f1f1f1;
+        color: #333;
+      }
+      .btn-secondary:hover:not(:disabled) {
+        background-color: #e0e0e0;
+      }
+      .message {
+        padding: 10px;
+        margin-bottom: 15px;
+        border-radius: 4px;
+        display: none;
+      }
+      .message.success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .message.error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+      /* Spinner styles */
+      .spinner {
+        display: none;
+        width: 16px;
+        height: 16px;
+        border: 2px solid #ffffff;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin-left: 8px;
+        vertical-align: middle;
+      }
+      .btn-primary.loading .spinner {
+        display: inline-block;
+      }
+      .btn-primary.loading .btn-text {
+        opacity: 0.7;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <div id="message" class="message" role="alert" aria-live="polite"></div>
+
+      <form id="emailForm" novalidate>
+        <div class="form-group">
+          <label for="email">Email Address:</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            placeholder="example@example.com"
+            required
+            aria-required="true"
+            aria-describedby="emailError"
+          />
+        </div>
+
+        <div class="button-group">
+          <button type="button" class="btn-secondary" id="cancelBtn">
+            Cancel
+          </button>
+          <button type="submit" class="btn-primary" id="sendBtn">
+            <span class="btn-text">Send</span>
+            <span class="spinner" aria-hidden="true"></span>
+          </button>
+        </div>
+      </form>
+    </main>
+
+    <script>
+      (function () {
+        'use strict';
+
+        // DOM elements
+        const emailForm = document.getElementById('emailForm');
+        const emailInput = document.getElementById('email');
+        const messageDiv = document.getElementById('message');
+        const sendBtn = document.getElementById('sendBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const buttons = [sendBtn, cancelBtn];
+
+        // Email validation regex
+        const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        /**
+         * Shows a message to the user
+         * @param {string} text - Message text
+         * @param {'success'|'error'} type - Message type
+         */
+        function showMessage(text, type) {
+          messageDiv.textContent = text;
+          messageDiv.className = 'message ' + type;
+          messageDiv.style.display = 'block';
+        }
+
+        /**
+         * Hides the message
+         */
+        function hideMessage() {
+          messageDiv.style.display = 'none';
+        }
+
+        /**
+         * Sets the enabled state of all buttons
+         * @param {boolean} enabled - Whether buttons should be enabled
+         */
+        function setButtonsEnabled(enabled) {
+          buttons.forEach(btn => {
+            btn.disabled = !enabled;
+          });
+        }
+
+        /**
+         * Sets the loading state of the send button
+         * @param {boolean} loading - Whether button is in loading state
+         */
+        function setSendButtonLoading(loading) {
+          if (loading) {
+            sendBtn.classList.add('loading');
+          } else {
+            sendBtn.classList.remove('loading');
+          }
+        }
+
+        /**
+         * Validates the email input
+         * @returns {string|null} - Email address if valid, null otherwise
+         */
+        function validateEmail() {
+          const email = emailInput.value.trim();
+
+          if (!email) {
+            showMessage('Please enter an email address', 'error');
+            return null;
+          }
+
+          if (!EMAIL_REGEX.test(email)) {
+            showMessage('Please enter a valid email address', 'error');
+            return null;
+          }
+
+          return email;
+        }
+
+        /**
+         * Handles form submission
+         * @param {Event} event - Submit event
+         */
+        function handleSubmit(event) {
+          event.preventDefault();
+
+          const email = validateEmail();
+          if (!email) {
+            return;
+          }
+
+          hideMessage();
+          setButtonsEnabled(false);
+          setSendButtonLoading(true);
+
+          // Check if google.script is available (GAS environment)
+          if (
+            typeof google === 'undefined' ||
+            !google.script ||
+            !google.script.run
+          ) {
+            showMessage('Error: Google Apps Script API not available', 'error');
+            setButtonsEnabled(true);
+            setSendButtonLoading(false);
+            return;
+          }
+
+          // Call server-side function
+          google.script.run
+            .withSuccessHandler(handleSuccess)
+            .withFailureHandler(handleFailure)
+            .sendTodosEmail(email);
+        }
+
+        /**
+         * Handles successful email send
+         * @param {Object} response - Server response
+         */
+        function handleSuccess(response) {
+          setSendButtonLoading(false);
+
+          if (response.success) {
+            showMessage(response.message, 'success');
+            setTimeout(() => {
+              if (google.script && google.script.host) {
+                google.script.host.close();
+              }
+            }, 1500);
+          } else {
+            showMessage(response.error, 'error');
+            setButtonsEnabled(true);
+          }
+        }
+
+        /**
+         * Handles email send failure
+         * @param {Error} error - Error object
+         */
+        function handleFailure(error) {
+          setSendButtonLoading(false);
+          showMessage('Error: ' + error.message, 'error');
+          setButtonsEnabled(true);
+        }
+
+        /**
+         * Handles cancel button click
+         */
+        function handleCancel() {
+          if (
+            typeof google !== 'undefined' &&
+            google.script &&
+            google.script.host
+          ) {
+            google.script.host.close();
+          }
+        }
+
+        // Event listeners
+        emailForm.addEventListener('submit', handleSubmit);
+        cancelBtn.addEventListener('click', handleCancel);
+      })();
+    </script>
+  </body>
+</html>

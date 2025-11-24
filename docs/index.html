@@ -1,26 +1,10 @@
-<!--
-Copyright 2025 wywy LLC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-you may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>
-      GAS開発ターボ化計画 v3.2 (Plan
-      B)：AIネイティブ・ユニファイドアーキテクチャ
+      GAS開発ターボ化計画 v4.1：Hono x AIネイティブ・ユニファイドアーキテクチャ
     </title>
     <style>
       body {
@@ -37,22 +21,22 @@ limitations under the License.
       h1 {
         text-align: center;
         font-size: 2.2em;
-        color: #1a73e8;
-        border-bottom: 3px solid #1a73e8;
+        color: #ff5722; /* Hono Orange */
+        border-bottom: 3px solid #ff5722;
         padding-bottom: 15px;
         margin-bottom: 40px;
       }
       h2 {
         font-size: 1.6em;
         color: #202124;
-        border-left: 5px solid #1a73e8;
+        border-left: 5px solid #ff5722;
         padding-left: 15px;
         margin-top: 40px;
         margin-bottom: 20px;
       }
       h3 {
         font-size: 1.3em;
-        color: #1a73e8;
+        color: #e64a19;
         margin-top: 25px;
       }
       p,
@@ -63,10 +47,10 @@ limitations under the License.
         margin-bottom: 30px;
       }
       .highlight-box {
-        background-color: #e8f0fe;
+        background-color: #fff3e0;
         padding: 20px;
         border-radius: 8px;
-        border: 1px solid #d2e3fc;
+        border: 1px solid #ffe0b2;
         margin: 20px 0;
       }
       .warning-box {
@@ -79,7 +63,7 @@ limitations under the License.
       }
       .highlight-title {
         font-weight: bold;
-        color: #1967d2;
+        color: #e64a19;
         margin-bottom: 5px;
         display: block;
       }
@@ -111,7 +95,7 @@ limitations under the License.
       .merit-card:hover {
         transform: translateY(-3px);
         box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        border-color: #1a73e8;
+        border-color: #ff5722;
       }
       .setup-card {
         background: #f8f9fa;
@@ -140,15 +124,9 @@ limitations under the License.
         background-color: #e8f0fe;
         color: #1967d2;
       }
-      .tag-arch {
-        background-color: #fff8e1;
-        color: #f57f17;
-      }
-      .tag-file {
-        background-color: #eee;
-        color: #333;
-        font-family: monospace;
-        border: 1px solid #ccc;
+      .tag-hono {
+        background-color: #fff3e0;
+        color: #e64a19;
       }
 
       table {
@@ -176,15 +154,6 @@ limitations under the License.
         border-radius: 4px;
         font-family: 'Roboto Mono', monospace;
         color: #d93025;
-        font-size: 0.9em;
-      }
-      pre {
-        background-color: #2d2d2d;
-        color: #f8f8f2;
-        padding: 15px;
-        border-radius: 8px;
-        overflow-x: auto;
-        font-family: 'Roboto Mono', monospace;
         font-size: 0.9em;
       }
       ul {
@@ -245,10 +214,10 @@ limitations under the License.
         color: #7b1fa2;
       }
       .role-env {
-        border-color: #34a853;
+        border-color: #ff5722;
       }
       .role-env h4 {
-        color: #137333;
+        color: #e64a19;
       }
       .role-mcp {
         border-color: #fbbc04;
@@ -448,53 +417,95 @@ limitations under the License.
         color: #5c6370;
         font-style: italic;
       }
-      .dir-highlight {
-        color: #e06c75;
-        font-weight: bold;
-      }
       .dir-folder {
         color: #61afef;
+        font-weight: bold;
+      }
+      .dir-file {
+        color: #e5c07b;
       }
     </style>
   </head>
   <body>
     <h1>
-      GAS開発ターボ化計画 v3.2 (Plan
-      B)：AIネイティブ・ユニファイドアーキテクチャ
+      GAS開発ターボ化計画 v4.1：Hono x AIネイティブ・ユニファイドアーキテクチャ
     </h1>
 
     <div class="section">
       <h2>1. 企画概要</h2>
       <p>
         本企画は、Google Apps Script (GAS)
-        開発の常識を覆す「AIネイティブな開発環境」の提案です。<br />
-        AI（MCP）が複雑な<strong
-          >「REST API (Advanced Service)
-          による統一実装」を完全に肩代わり</strong
-        >することで、
-        コードの二重管理（GAS用/Local用）を撤廃。「壊れやすさ」と「テストのしにくさ」を解決し、
-        <strong
-          >「1つのコードで、ローカル実行も本番実行も完全に同じ挙動」</strong
-        >を実現します。
+        開発における「壊れやすさ」「テストのしにくさ」「SPA連携の難しさ」を一挙に解決するソリューションです。<br />
+        <strong>Webフレームワーク「Hono」をアダプターとして採用</strong
+        >し、AI（MCP）が複雑なインフラコードを自律生成。
+        <strong>「1つのコードベース」</strong
+        >で、ローカルAPIサーバーとしても、本番GASアプリとしても、完全に同一の挙動を実現します。
       </p>
       <div class="highlight-box">
         <span class="highlight-title"
-          >Core Concept: AI-Managed Infrastructure</span
+          >New Concept: Hono Adapter & Independent MCP</span
         >
-        人間はロジックだけを指示し、MCPが「ローカルでもGASでも動くユニバーサルなコード」を生成する。
+        GASを「普通のWebサーバー」として振る舞わせ、Webアプリ開発に拡張可能。AIツールは独立したプロジェクトとして管理し、開発環境を汚染しない。
       </div>
     </div>
 
     <div class="section">
-      <h2>2. 解決する課題とメリット</h2>
+      <h2>2. 戦略的意義：それでもなぜGASを選ぶのか？</h2>
+      <p>
+        「ここまでWeb標準技術（Hono, REST API,
+        Vite）をフル活用するなら、最初からCloud
+        RunやAWSを使えば良いのでは？」<br />
+        技術的には正論ですが、<strong>ビジネスと運用の観点からは「あえてGASを選ぶ」強力な理由</strong>が4つ存在します。
+      </p>
+
+      <div class="setup-grid">
+        <div class="setup-card" style="border-left: 4px solid #137333">
+          <strong style="color: #137333">1. 完全無料の社内インフラ</strong>
+          <p style="font-size: 0.9em; margin-top: 5px">
+            サーバー代（GAS）もデータベース代（Spreadsheet）も無料。月額0円で永続的に運用可能な環境は、GAS以外に存在しません。
+          </p>
+        </div>
+        <div class="setup-card" style="border-left: 4px solid #1967d2">
+          <strong style="color: #1967d2">2. 認証・認可の即時構築</strong>
+          <p style="font-size: 0.9em; margin-top: 5px">
+            デプロイ時に「ドメイン内ユーザーのみ」を選ぶだけで、堅牢なGoogle認証付き社内ツールが完成します。実装コストはゼロです。
+          </p>
+        </div>
+        <div class="setup-card" style="border-left: 4px solid #f9ab00">
+          <strong style="color: #f9ab00">3. 属人化しない保守性</strong>
+          <p style="font-size: 0.9em; margin-top: 5px">
+            AWSアカウントの引き継ぎは困難ですが、GASなら「シートの共有」だけで管理権限を移譲できます。非エンジニアでもデータ管理が可能です。
+          </p>
+        </div>
+        <div class="setup-card" style="border-left: 4px solid #e64a19">
+          <strong style="color: #e64a19">4. 最高のイグジット戦略</strong>
+          <p style="font-size: 0.9em; margin-top: 5px">
+            本構成はWeb標準技術で書かれているため、GASの限界が来たらコードをそのままCloud
+            Run等へ移行（Exit）可能です。「GASロックイン」を回避します。
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>3. 解決する課題とメリット</h2>
       <div class="merit-grid">
+        <div class="merit-card">
+          <span class="tag tag-hono">Hono</span>
+          <span class="merit-icon">🔥</span>
+          <h3>Web標準 API化</h3>
+          <p>
+            GAS特有の<code>doGet</code>に依存せず、Honoのルーター機能で<code>/api/users</code>のような標準的なREST
+            APIを構築。Webアプリからの接続が極めて容易になります。
+          </p>
+        </div>
         <div class="merit-card">
           <span class="tag tag-arch">Architecture</span>
           <span class="merit-icon">💎</span>
           <h3>Single Source of Truth</h3>
           <p>
-            GAS用とLocal用の実装を分ける必要はありません。 REST
-            APIベースの単一コードにより、ローカルテストでの「書式設定」や「セルの結合」までもが本番と完全に一致します。
+            REST API (Advanced Service)
+            ベースの単一コードにより、ローカルテストでの「書式設定」や「メール送信」までもが本番と完全に一致します。
           </p>
         </div>
         <div class="merit-card">
@@ -502,54 +513,46 @@ limitations under the License.
           <span class="merit-icon">🤖</span>
           <h3>複雑性の隠蔽</h3>
           <p>
-            人間が書くと数十行になる複雑なJSONリクエストも、AIなら一瞬で生成。
-            「書きにくさ」というREST
-            API最大のデメリットを、AIの力で無効化します。
-          </p>
-        </div>
-        <div class="merit-card">
-          <span class="tag tag-platform">Future Proof</span>
-          <span class="merit-icon">☁️</span>
-          <h3>クラウド移行も即座に</h3>
-          <p>
-            生成されるコードは標準的なGoogle APIクライアント準拠。
-            将来GASを離れて、Cloud RunやAWS
-            Lambdaへ移行する際も、コードをそのまま再利用可能です。
+            人間が書くと数十行になる複雑なGoogle
+            APIのリクエストJSONも、AIなら一瞬で生成。面倒なインフラ層はすべてAIにお任せ。
           </p>
         </div>
       </div>
     </div>
 
     <div class="section">
-      <h2>3. アーキテクチャ構成図</h2>
+      <h2>4. アーキテクチャ構成図</h2>
 
-      <h3>3.1 Human-AI Interaction Loop</h3>
+      <h3>4.1 Human-AI Interaction Loop</h3>
       <p>
-        AIが開発の中心に位置し、人間が苦手な「インフラ層のコード」を一手に引き受けます。
+        Honoが「入り口」を、Native
+        Fetchが「出口」を担当し、AIがその間を繋ぎます。
       </p>
 
       <div class="arch-grid">
         <div class="arch-box role-human area-human">
           <h4>👨‍💻 人間 (開発者)</h4>
-          <p><strong>役割:</strong> 意思決定 & ロジック実装</p>
+          <p><strong>役割:</strong> ロジック & UI実装</p>
           <ul>
             <li>VS Codeでコーディング</li>
             <li>Geminiへの指示出し</li>
-            <li>ローカルテスト実行</li>
+            <li>ローカルでWebアプリ確認</li>
           </ul>
         </div>
 
         <div class="arrow-container conn-top">
-          <div class="arrow-text">自然言語で指示<br />"赤字にする機能追加"</div>
+          <div class="arrow-text">
+            自然言語で指示<br />"APIエンドポイント追加"
+          </div>
           <div class="arrow-line"></div>
         </div>
 
         <div class="arch-box role-gemini area-gemini">
           <h4>✨ Gemini (AI Agent)</h4>
-          <p><strong>役割:</strong> 意図理解 & コード設計</p>
+          <p><strong>役割:</strong> 設計 & Hono実装</p>
           <ul>
             <li>ユーザーの意図を解析</li>
-            <li>REST APIの仕様を熟知</li>
+            <li>Honoルーター設計</li>
             <li>MCPへ実装命令</li>
           </ul>
         </div>
@@ -565,88 +568,76 @@ limitations under the License.
         </div>
 
         <div class="arch-box role-env area-env">
-          <h4>📁 ユニファイド環境</h4>
-          <p><strong>役割:</strong> 実行環境 (GAS/Node)</p>
+          <h4>📁 Hono x GAS環境</h4>
+          <p><strong>役割:</strong> 実行環境</p>
           <ul>
-            <li><code>src/app/</code> (Logic)</li>
-            <li><code>src/infra/shared/</code> (Universal Code)</li>
-            <li><code>dist/</code> (Artifacts)</li>
+            <li><code>src/index.ts</code> (Hono App)</li>
+            <li><code>src/features/</code> (Unified Repo)</li>
+            <li><code>dist/</code> (Bundle Artifacts)</li>
           </ul>
         </div>
 
         <div class="arrow-container conn-bottom arrow-left">
-          <div class="arrow-text">単一コード生成<br />設定更新</div>
+          <div class="arrow-text">コード生成<br />設定更新</div>
           <div class="arrow-line"></div>
         </div>
 
         <div class="arch-box role-mcp area-mcp">
-          <h4>⚙️ ローカルMCP</h4>
-          <p><strong>役割:</strong> ロボットアーム</p>
+          <h4>⚙️ 独立MCPサーバー</h4>
+          <p><strong>役割:</strong> 外部ロボットアーム</p>
           <ul>
-            <li>テンプレートエンジン</li>
-            <li>JSONビルダー</li>
+            <li>プロジェクト外で動作</li>
             <li>ファイル操作 (fs)</li>
+            <li>JSONビルダー</li>
           </ul>
         </div>
       </div>
 
-      <h3>3.2 MCP内部の処理イメージ：Unified Code Generator</h3>
+      <h3>4.2 MCP内部の処理イメージ：Unified Code Generator</h3>
       <p>
-        これまでの「環境ごとにコードを書き分ける」アプローチを廃止。<br />
-        MCPは、どちらの環境でも動く<strong>「ユニバーサルな実装クラス」を1つだけ生成</strong>します。
+        AIは「Honoのコントローラー」と「REST
+        APIリポジトリ」をセットで生成し、即座にAPIとして利用可能にします。
       </p>
 
       <div class="mcp-logic-container">
         <div class="logic-step">
           <span class="logic-icon">📥</span>
           <span class="logic-label">1. Input (Tool Call)</span>
-          <span class="logic-sub">Geminiからの命令</span>
           <div class="code-box">
-            { "feature": "Highlight", "action": "setBackground('red')" }
+            { "api": "POST /api/highlight", "logic": "Salesセルを赤くする" }
           </div>
-          <p style="font-size: 0.8em; margin-top: 5px">
-            「赤背景にする機能を実装せよ」
-          </p>
         </div>
 
         <div class="logic-arrow">➡</div>
 
         <div class="logic-step" style="background: #f3e5f5; border-radius: 8px">
           <span class="logic-icon">⚙️</span>
-          <span class="logic-label">2. Process (Engine)</span>
-          <span class="logic-sub">REST API JSON構築</span>
+          <span class="logic-label">2. Process</span>
           <div class="code-box box-purple">
-            const request = {<br />
-            requests: [{<br />
-            repeatCell: { ...complex JSON... }<br />
-            }]<br />
-            };
+            // Hono Route<br />
+            app.post(...)<br />
+            // REST JSON<br />
+            { requests: [...] }
           </div>
-          <p style="font-size: 0.8em; margin-top: 5px">
-            人間には書けない複雑なJSONを自動生成
-          </p>
         </div>
 
         <div class="logic-arrow">➡</div>
 
         <div class="logic-step">
           <span class="logic-icon">📄</span>
-          <span class="logic-label">3. Output (Single File)</span>
-          <span class="logic-sub">単一ファイル生成</span>
+          <span class="logic-label">3. Output</span>
           <ul class="file-list">
-            <li>💜 <code>UniversalHighlightRepo.ts</code></li>
+            <li>🔥 <code>index.ts</code> (Route追記)</li>
+            <li>💜 <code>UniversalRepo.ts</code></li>
           </ul>
-          <p style="font-size: 0.8em; margin-top: 5px">
-            この1ファイルだけで、GASもLocalも完璧に動作！
-          </p>
         </div>
       </div>
     </div>
 
     <div class="section">
-      <h2>4. MCPサーバーが提供する機能 (The Big 3)</h2>
+      <h2>5. MCPサーバーが提供する機能 (The Big 3)</h2>
       <p>
-        本アーキテクチャにおいて、MCPは「インフラコードの専属エンジニア」として振る舞います。
+        AIツールは独立したプロジェクトとして管理され、GASアプリに対して外側から操作を行います。
       </p>
 
       <table>
@@ -665,17 +656,19 @@ limitations under the License.
             </td>
             <td>
               <strong>対話型・範囲定義ウィザード</strong><br />
-              API経由でスプレッドシートに「名前付き範囲」を設定し、コード内の定数と同期。<br />
-              列の挿入・移動に強い堅牢なデータ基盤を構築する。
+              API経由でスプレッドシートに「名前付き範囲」を設定し、コード内の定数と同期。列の挿入・移動に強い堅牢なデータ基盤を構築する。
             </td>
           </tr>
           <tr>
             <td><code>scaffold_feature</code></td>
-            <td><span class="tag tag-tech" style="margin: 0">Coding</span></td>
             <td>
-              <strong>ユニバーサルコード生成</strong><br />
-              Advanced Service (REST API) を利用したリポジトリクラスを生成。<br />
-              人間には記述が困難なAPIリクエストJSONを自動構築し、GAS/Local両対応のコードを一撃で作成する。
+              <span class="tag tag-hono" style="margin: 0">Hono/Coding</span>
+            </td>
+            <td>
+              <strong>フルスタックAPI生成</strong><br />
+              Honoのルーティング定義と、Advanced Service (REST API)
+              を利用したリポジトリクラスを一括生成。Web
+              APIとして即座に疎通可能な状態を作る。
             </td>
           </tr>
           <tr>
@@ -685,8 +678,7 @@ limitations under the License.
             </td>
             <td>
               <strong>環境構築オートメーション</strong><br />
-              GCPプロジェクト設定、API有効化チェック、JSON鍵配置を自動化。<br />
-              ローカル実行に必要な認証周りのトラブルを撲滅する。
+              GCPプロジェクト設定、API有効化チェック、JSON鍵配置を自動化。ローカル実行に必要な認証周りのトラブルを撲滅する。
             </td>
           </tr>
         </tbody>
@@ -694,7 +686,7 @@ limitations under the License.
     </div>
 
     <div class="section">
-      <h2>5. ローカル実行のためのインフラ準備 (One-time Setup)</h2>
+      <h2>6. ローカル実行のためのインフラ準備 (One-time Setup)</h2>
       <div class="setup-grid">
         <div class="setup-card">
           <strong>1. GCPプロジェクト</strong>
@@ -726,111 +718,122 @@ limitations under the License.
     </div>
 
     <div class="section">
-      <h2>6. 推奨ディレクトリ構成：Test-Separated Hybrid</h2>
+      <h2>7. 推奨ディレクトリ構成：Workspace Hybrid</h2>
       <p>
-        Plan
-        Bの真価（ローカルでの完全動作再現）を活かすため、<strong>「本番コード(src)」と「検証コード(test)」をトップレベルで分離する構成</strong>を推奨します。
-        これにより、デプロイ時の事故を防ぎつつ、ローカルでは本物のスプレッドシートを使った結合テストが可能になります。
+        <strong>MCPサーバーを独立したプロジェクト（Sibling Project）</strong
+        >として配置し、GASアプリ側はHonoを中心に構成します。<br />
+        これにより、AIツール自体を別リポジトリとして管理したり、チーム間で共有することが容易になります。
       </p>
 
       <div class="dir-tree">
-        root/ ├── .clasp.json
-        <span class="dir-comment"># GAS設定 (src/ のみをデプロイ対象に)</span>
-        ├── .claspignore
+        root/ ├── <span class="dir-folder">gas-app/</span>
         <span class="dir-comment"
-          ># 重要: src/ 以外(test, mcp等)を全て除外</span
+          ># 🚀 [GASアプリ本体] Hono + Unified Repo</span
         >
-        ├── secrets/ <span class="dir-comment"># 🔐 [Local専用] 認証鍵</span> │
-        └── service-account.json │ ├──
-        <span class="dir-folder">mcp-server/</span>
-        <span class="dir-comment"># 🤖 [AI領域] プロジェクト専用AIツール</span>
-        │ ├── src/ │ │ ├── tools/
-        <span class="dir-comment"># scaffold_unified 等の実装</span> │ │ └──
+        │ ├── .clasp.json
+        <span class="dir-comment"># dist/ をデプロイ対象に</span> │ ├──
+        package.json │ ├── build.js
+        <span class="dir-comment"># esbuild設定 (Honoバンドル用)</span> │ ├──
+        secrets/ <span class="dir-comment"># 🔐 [Local専用] 認証鍵</span> │ ├──
+        <span class="dir-folder">src/</span> │ │ ├── index.ts
+        <span class="dir-comment"># 🔥 [共通] Honoアプリ定義 (Routes)</span> │ │
+        ├── entry-node.ts<span class="dir-comment"
+          ># 🟢 [Local] Nodeサーバー起動 (localhost:3000)</span
+        >
+        │ │ ├── entry-gas.ts
+        <span class="dir-comment"># 🔴 [GAS] doGetアダプター</span> │ │ ├──
+        core/ <span class="dir-comment"># 💜 Client (Fetch Polyfill)</span> │ │
+        └── features/
+        <span class="dir-comment"># 📦 Unified Repos (AI生成)</span> │ └──
+        <span class="dir-folder">test/</span>
+        <span class="dir-comment"># ✅ [Local専用] 結合テスト</span> │ └──
+        features/ │ └── <span class="dir-folder">mcp-server/</span>
+        <span class="dir-comment"># ⚙️ [独立AIツール] 開発支援ロボット</span>
+        ├── package.json ├── src/ │ ├── tools/
+        <span class="dir-comment"># scaffold_feature (Hono対応版)</span> │ └──
         templates/
-        <span class="dir-comment"># REST API実装用のテンプレート</span> │ ├──
-        <span class="dir-folder">src/</span>
-        <span class="dir-comment"># 🚀 [GAS領域] 本番コード</span> │ ├── main.ts
-        <span class="dir-comment"># エントリーポイント</span> │ ├── core/
-        <span class="dir-comment"># 基盤コード</span> │ │ ├── client.ts
-        <span class="dir-comment"># 💜 Universal Client (環境スイッチ)</span> │
-        │ └── types.ts <span class="dir-comment"># 共通型定義</span> │ └──
-        features/ <span class="dir-comment"># 📦 機能単位</span> │ ├── sales/ │
-        │ ├── SalesUseCase.ts <span class="dir-comment"># ロジック</span> │ │
-        └── UniversalSalesRepo.ts
-        <span class="dir-comment"># 💜 REST API統一実装 (AI生成)</span> │ └──
-        inventory/ │ └── <span class="dir-folder">test/</span>
-        <span class="dir-comment"># ✅ [Local専用] 検証コード</span> ├──
-        setup.ts
-        <span class="dir-comment"># テスト前処理 (.env読み込み等)</span> └──
-        features/ <span class="dir-comment"># srcと対になる構造</span> ├──
-        sales/ │ └── SalesUseCase.test.ts
-        <span class="dir-comment"># 結合テスト</span>
-        └── inventory/
+        <span class="dir-comment"># Honoコントローラー等のテンプレート</span>
+        └── index.ts <span class="dir-comment"># MCPサーバー起動</span>
       </div>
 
       <p style="margin-top: 15px; font-size: 0.9em">
-        <span class="tag tag-file">.claspignore</span> の設定例：<br />
-        <code>**/**</code><br />
-        <code>!src/**</code><br />
-        <code>!appsscript.json</code><br />
-        （これにより、テストコードやAI用コードが誤って本番環境にアップロードされるのを防ぎます）
+        <strong>ポイント：</strong><br />
+        <code>gas-app</code> と
+        <code>mcp-server</code> は完全に分離されています。AIは
+        <code>mcp-server</code> から
+        <code>gas-app</code> 内のファイルを操作します。<br />
+        GASにデプロイされるのは
+        <code>gas-app/dist/bundle.js</code>
+        のみとなり、構成が非常にクリーンです。
       </p>
     </div>
 
     <div class="section">
-      <h2>7. 参考資料：なぜ「REST API統一」が最強なのか？</h2>
+      <h2>8. 参考資料：Hono x REST API統一の実装例</h2>
       <p>
-        これまでは「GASの書きやすさ」を優先して、ローカル動作を犠牲にするか、面倒な二重実装をするしかありませんでした。
-        しかし、<strong
-          >「コードを書くのはAI」という前提に立つと、景色は一変します。</strong
-        >
+        Honoが「ルーター」としてリクエストを受け、Unified
+        Repoが「Fetch」でGoogle APIを叩く流れです。
       </p>
 
       <div class="ref-concept">
         <div class="ref-text">
-          <h3>🔄 パラダイムシフト</h3>
+          <h3>🔄 処理の流れ (Local / GAS 共通)</h3>
           <p>
-            SpreadsheetApp（人間用）は便利ですが、GAS環境でしか動きません。<br />
-            一方、Sheets
-            API（機械用）はどこでも動きますが、人間が書くにはJSONが複雑すぎます。<br />
-            <strong>「複雑なJSONはAIに書かせればいい」。</strong>
-            この発想の転換により、
-            二重実装なしで完璧な互換性を持つ「夢の環境」が実現しました。
+            1. <strong>Request:</strong>
+            <code>POST /api/highlight</code> (Web標準)<br />
+            2.
+            <strong>Hono:</strong>
+            ルーティングを解析し、コントローラーを実行<br />
+            3. <strong>Repo:</strong> 複雑なJSONを構築し、<code>fetch</code>
+            でGoogle APIへ送信<br />
+            4. <strong>Response:</strong>
+            <code>c.json({ success: true })</code> を返却
           </p>
         </div>
       </div>
 
-      <h3>📝 コードでの比較</h3>
+      <h3>📝 Hono + Universal Repo コード例</h3>
 
-      <h4>❌ 従来：GAS用 (人間向け)</h4>
-      <div class="ref-code-block" style="border: 1px solid #db4437">
+      <div class="ref-code-block" style="border: 1px solid #ff5722">
+        <span class="comment">// src/index.ts (Hono App)</span>
+        <span class="keyword">const</span> app =
+        <span class="keyword">new</span> Hono(); app.post(<span class="string"
+          >'/api/highlight'</span
+        >, <span class="keyword">async</span> (c) => {
+        <span class="comment">// 1. Honoでリクエスト解析</span>
+        <span class="keyword">const</span> { range } =
+        <span class="keyword">await</span> c.req.json();
+
         <span class="comment"
-          >// 1行で書けるが、ローカルでは動かない（またはモックが必要）</span
+          >// 2. Unified Repoを利用 (中身はREST API + Fetch Polyfill)</span
         >
-        range.setBackground("red");
+        <span class="keyword">const</span> repo =
+        <span class="keyword">new</span> UniversalSheetRepo();
+        <span class="keyword">await</span> repo.setRedBackground(range);
+
+        <span class="keyword">return</span> c.json({ status:
+        <span class="string">'ok'</span> }); });
       </div>
 
       <br />
 
-      <h4>✅ 今回：REST API統一 (AI向け)</h4>
       <div class="ref-code-block" style="border: 1px solid #9c27b0">
-        <span class="comment">// 人間には複雑だが、AIが一瞬で生成する</span>
-        <span class="keyword">const</span> resource = { requests: [{ repeatCell:
-        { range: { ... }, cell: { userEnteredFormat: { backgroundColor: { red:
-        1, green: 0, blue: 0 } } }, fields: "userEnteredFormat.backgroundColor"
-        } }] };
         <span class="comment"
-          >//
-          クライアントを切り替えるだけで、GASでもLocalでも全く同じコードが動く！</span
+          >// src/features/sheets/UniversalSheetRepo.ts (AI生成)</span
         >
-        <span class="keyword">await</span> client.batchUpdate(resource);
-      </div>
+        <span class="keyword">export class</span> UniversalSheetRepo {
+        <span class="keyword">async</span> setRedBackground(range: string) {
+        <span class="comment">// AIが生成した複雑なJSON</span>
+        <span class="keyword">const</span> resource = { requests: [{ repeatCell:
+        { ... } }] };
 
-      <p style="margin-top: 20px">
-        これにより、ローカルテストで確認した「セルの色」「罫線の太さ」などは、
-        <strong>本番デプロイ後も100%確実に同じ見た目で反映されます。</strong>
-        これが、AI時代の新しいGAS開発スタンダードです。
-      </p>
+        <span class="comment"
+          >// Fetch Polyfillで送信 (GASでもNodeでも動く)</span
+        >
+        <span class="keyword">await</span> apiClient.post(<span class="string"
+          >'https://sheets.googleapis.com/...'</span
+        >, resource); } }
+      </div>
     </div>
   </body>
 </html>

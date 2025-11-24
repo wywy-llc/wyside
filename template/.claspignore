@@ -1,0 +1,10 @@
+**/**
+!src/**
+!appsscript.json
+test/**
+secrets/**
+mcp-server/**
+node_modules/**
+*.test.ts
+*.config.ts
+.env

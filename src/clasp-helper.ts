@@ -1,19 +1,4 @@
 #!/usr/bin/env node
-/**
- * Copyright 2025 wywy LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * you may obtain a copy of the License at
- *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 
 import spawn from 'cross-spawn';
 import fs from 'fs-extra';
@@ -26,7 +11,6 @@ const DEBUG_ENABLED =
   process.env.WYSIDE_DEBUG?.toLowerCase() === 'true';
 const debugLog = DEBUG_ENABLED
   ? (...args: unknown[]) => {
-      // eslint-disable-next-line no-console
       console.log('[wyside:debug]', ...args);
     }
   : () => {};
@@ -79,15 +63,17 @@ export class ClaspHelper {
    */
   async clean(rootDir: string) {
     debugLog('clean clasp artifacts', { rootDir });
-    // Remove all clasp project artifacts
-    await fs.rm(path.join(rootDir, '.clasp.json'), {
-      recursive: true,
-      force: true,
-    });
-    await fs.rm('appsscript.json', { force: true });
-    await fs.rm('.clasp.json', { force: true });
-    await fs.rm('.clasp-dev.json', { force: true });
-    await fs.rm('.clasp-prod.json', { force: true });
+    // Remove all clasp project artifacts in parallel
+    await Promise.all([
+      fs.rm(path.join(rootDir, '.clasp.json'), {
+        force: true,
+        recursive: true,
+      }),
+      fs.rm('appsscript.json', { force: true }),
+      fs.rm('.clasp.json', { force: true }),
+      fs.rm('.clasp-dev.json', { force: true }),
+      fs.rm('.clasp-prod.json', { force: true }),
+    ]);
 
     // Make sure root dir exists
     await fs.mkdirs(rootDir);
@@ -128,6 +114,13 @@ export class ClaspHelper {
    * @returns {Promise<{sheetLink: string, scriptLink: string}>}
    */
   async create(title: string, scriptIdProd: string, rootDir: string) {
+    // Backup appsscript.json if it exists (e.g. from template)
+    let appsscriptBackup: string | null = null;
+    if (await fs.exists('appsscript.json')) {
+      appsscriptBackup = await fs.readFile('appsscript.json', 'utf8');
+      debugLog('Backed up existing appsscript.json');
+    }
+
     await this.clean(rootDir);
 
     debugLog('clasp create start', {
@@ -164,6 +157,10 @@ export class ClaspHelper {
 
     const failureOutput = `${res.stdout ?? ''}${res.stderr ?? ''}`.trim();
     if (res.status !== 0) {
+      // Restore backup if failed
+      if (appsscriptBackup) {
+        await writeFileAtomic('appsscript.json', appsscriptBackup);
+      }
       throw new Error(
         failureOutput || `clasp create failed with status ${res.status}`
       );
@@ -176,9 +173,14 @@ export class ClaspHelper {
     const claspPathDist = path.join(rootDir, '.clasp.json');
     const claspPathRoot = '.clasp.json';
     const appsscriptPath = path.join(rootDir, 'appsscript.json');
-    const claspExistsDist = await fs.pathExists(claspPathDist);
-    const claspExistsRoot = await fs.pathExists(claspPathRoot);
-    const appsscriptExists = await fs.pathExists(appsscriptPath);
+
+    // Check file existence in parallel
+    const [claspExistsDist, claspExistsRoot, appsscriptExists] =
+      await Promise.all([
+        fs.pathExists(claspPathDist),
+        fs.pathExists(claspPathRoot),
+        fs.pathExists(appsscriptPath),
+      ]);
     const claspExists = claspExistsDist || claspExistsRoot;
 
     debugLog('clasp create artifacts', {
@@ -202,6 +204,12 @@ export class ClaspHelper {
     }
 
     await this.arrangeFiles(rootDir, scriptIdProd);
+
+    // Restore appsscript.json from backup (overwriting the one clasp created/moved)
+    if (appsscriptBackup) {
+      debugLog('Restoring appsscript.json from backup');
+      await writeFileAtomic('appsscript.json', appsscriptBackup);
+    }
 
     // Extract URLs from output
     const outputForLinks = combinedOutput;

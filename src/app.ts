@@ -1,19 +1,4 @@
 #!/usr/bin/env node
-/**
- * Copyright 2025 wywy LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * you may obtain a copy of the License at
- *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 
 import chalk from 'chalk';
 import fs from 'fs-extra';
@@ -24,6 +9,8 @@ import writeFileAtomic from 'write-file-atomic';
 
 import { ClaspHelper } from './clasp-helper.js';
 import { config, configForAngular, configForSvelte } from './config.js';
+import { runMcpSetup } from './mcp-client.js';
+import { startMcpServer } from './mcp-setup.js';
 import { PackageHelper } from './package-helper.js';
 
 /**
@@ -36,6 +23,15 @@ export const app = null;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const DEBUG_ENABLED =
+  process.env.WYSIDE_DEBUG === '1' ||
+  process.env.WYSIDE_DEBUG?.toLowerCase() === 'true';
+const debugLog = DEBUG_ENABLED
+  ? (...args: unknown[]) => {
+      console.log('[wyside:debug]', ...args);
+    }
+  : () => {};
+
 let CONFIG: typeof config;
 
 export interface Options {
@@ -44,6 +40,14 @@ export interface Options {
   title: string;
   ui: boolean;
   uiFramework?: 'angular' | 'svelte';
+  setupGcp?: boolean;
+}
+
+/**
+ * Handle MCP server startup.
+ */
+export function handleMcpCommand() {
+  startMcpServer();
 }
 
 /**
@@ -184,7 +188,7 @@ async function querySelect(
   options: Options
 ): Promise<string> {
   if (options.yes) {
-    return 'angular'; // Default to Angular if yes is passed, preserving legacy behavior
+    return 'none'; // Default to None if yes is passed
   }
   if (options.no) {
     return 'none';
@@ -312,24 +316,87 @@ async function handleTemplate(options: Options) {
   const items = await fs.readdir(templates);
 
   for (const item of items) {
-    const targetDirName = path.join(cwd, item);
+    const sourcePath = path.join(templates, item);
+    const targetPath = path.join(cwd, item);
+    const stats = await fs.stat(sourcePath);
 
-    // Create folder
-    fs.mkdirSync(targetDirName, { recursive: true });
+    if (stats.isDirectory()) {
+      // Create folder if not exists
+      await fs.ensureDir(targetPath);
 
-    // Only install the template if no ts files exist in target directory.
-    const files = fs.readdirSync(targetDirName);
-    const tsFiles = files.filter((file: string) =>
-      file.toLowerCase().endsWith('.ts')
-    );
+      // Only install the template if no ts files exist in target directory.
+      const files = await fs.readdir(targetPath);
+      const tsFiles = files.filter((file: string) =>
+        file.toLowerCase().endsWith('.ts')
+      );
 
-    // Copy files
-    if (tsFiles.length === 0) {
-      console.log(`${chalk.green('\u2714')}`, `Installing ${item} template...`);
-      await fs.copy(path.join(templates, item), targetDirName, {
-        overwrite: false,
-      });
+      if (tsFiles.length === 0) {
+        console.log(
+          `${chalk.green('\u2714')}`,
+          `Installing ${item} template...`
+        );
+        await fs.copy(sourcePath, targetPath, {
+          overwrite: false,
+        });
+      }
+    } else {
+      // It's a file
+      if (item === '.clasp.json') return;
+
+      if (!(await fs.pathExists(targetPath))) {
+        console.log(`${chalk.green('\u2714')}`, `Copying ${item}...`);
+        await fs.copy(sourcePath, targetPath);
+      }
     }
+  }
+}
+
+/**
+ * Generate .clasp-*.json files from environment variables if they exist.
+ * Reads from .env file if present.
+ */
+async function generateClaspConfigsFromEnv() {
+  // Try to load .env file if it exists
+  const envPath = path.join(process.cwd(), '.env');
+  if (await fs.pathExists(envPath)) {
+    const envContent = await fs.readFile(envPath, 'utf8');
+    const envLines = envContent.split('\n');
+    for (const line of envLines) {
+      const match = line.match(/^([A-Z_]+)=(.*)$/);
+      if (match) {
+        const [, key, value] = match;
+        if (!process.env[key]) {
+          process.env[key] = value;
+        }
+      }
+    }
+  }
+
+  const scriptIdDev = process.env.SCRIPT_ID_DEV?.trim();
+  const scriptIdProd = process.env.SCRIPT_ID_PROD?.trim();
+
+  if (scriptIdDev && scriptIdDev.length > 0) {
+    const devConfig = {
+      scriptId: scriptIdDev,
+      rootDir: './dist',
+    };
+    await writeFileAtomic(
+      '.clasp-dev.json',
+      JSON.stringify(devConfig, null, 2)
+    );
+    debugLog('Generated .clasp-dev.json from SCRIPT_ID_DEV');
+  }
+
+  if (scriptIdProd && scriptIdProd.length > 0) {
+    const prodConfig = {
+      scriptId: scriptIdProd,
+      rootDir: './dist',
+    };
+    await writeFileAtomic(
+      '.clasp-prod.json',
+      JSON.stringify(prodConfig, null, 2)
+    );
+    debugLog('Generated .clasp-prod.json from SCRIPT_ID_PROD');
   }
 }
 
@@ -350,6 +417,8 @@ async function handleClasp(options: Options) {
     : false;
 
   if (claspConfigExists && !overrideClasp) {
+    // Still try to generate from env if available
+    await generateClaspConfigsFromEnv();
     return;
   }
 
@@ -384,6 +453,7 @@ export async function init(
     title: string | undefined;
     yes: boolean | undefined;
     no: boolean | undefined;
+    setupGcp: boolean | undefined;
   } & Record<string, unknown>
 ) {
   const projectTitle =
@@ -398,6 +468,7 @@ export async function init(
     no: flags.no || false,
     title: projectTitle,
     ui: false,
+    setupGcp: flags.setupGcp || false,
   };
 
   const uiFramework = await querySelect(
@@ -436,8 +507,79 @@ export async function init(
   // Handle template
   await handleTemplate(options);
 
+  if (options.setupGcp) {
+    console.log(`${chalk.green('\u2714')}`, 'Running GCP setup via MCP...');
+    debugLog('Calling runMcpSetup() for GCP setup');
+    try {
+      await runMcpSetup({ title: options.title });
+    } catch (e) {
+      console.error(
+        chalk.red('GCP Setup failed:'),
+        e instanceof Error ? e.message : String(e)
+      );
+      // We don't exit process, allow init to continue (or fail if critical?)
+      // Assuming we want to continue with other steps if possible, or user can Ctrl+C
+    }
+  }
+
   // Handle clasp
-  await handleClasp(options);
+  try {
+    await handleClasp(options);
+  } catch (e) {
+    console.error(
+      chalk.yellow('Clasp setup encountered an issue:'),
+      e instanceof Error ? e.message : String(e)
+    );
+    console.log(
+      chalk.yellow(
+        'Continuing with initialization. You can configure clasp manually later.'
+      )
+    );
+  }
+
+  // Ensure appsscript.json exists (copy from template if missing)
+  if (!(await fs.pathExists('appsscript.json'))) {
+    const templateAppsscript = path.join(
+      __dirname,
+      '../../template/appsscript.json'
+    );
+    if (await fs.pathExists(templateAppsscript)) {
+      console.log(`${chalk.green('\u2714')}`, 'Copying appsscript.json...');
+      await fs.copyFile(templateAppsscript, 'appsscript.json');
+    }
+  }
+
+  // Generate .clasp-*.json from environment variables if available
+  // This ensures they exist even if clasp create failed or was skipped
+  await generateClaspConfigsFromEnv();
+
+  // Ensure .clasp-dev.json and .clasp-prod.json exist (create placeholders if missing)
+  if (!(await fs.pathExists('.clasp-dev.json'))) {
+    console.log(
+      chalk.yellow(
+        'Note: .clasp-dev.json not found. Creating placeholder. Update SCRIPT_ID_DEV in .env and run init again.'
+      )
+    );
+    const placeholderConfig = {
+      scriptId: 'YOUR_SCRIPT_ID_HERE',
+      rootDir: './dist',
+    };
+    await writeFileAtomic(
+      '.clasp-dev.json',
+      JSON.stringify(placeholderConfig, null, 2)
+    );
+  }
+
+  if (!(await fs.pathExists('.clasp-prod.json'))) {
+    const placeholderConfig = {
+      scriptId: 'YOUR_SCRIPT_ID_HERE',
+      rootDir: './dist',
+    };
+    await writeFileAtomic(
+      '.clasp-prod.json',
+      JSON.stringify(placeholderConfig, null, 2)
+    );
+  }
 
   if (options.ui) {
     console.log();

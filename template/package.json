@@ -1,0 +1,52 @@
+{
+  "name": "wyside-template",
+  "version": "0.0.1",
+  "description": "Wyside template project",
+  "type": "module",
+  "scripts": {
+    "clean": "rimraf build dist",
+    "lint": "eslint --fix --no-error-on-unmatched-pattern src/ test/",
+    "format": "prettier --write --log-level silent .",
+    "bundle": "rollup --no-treeshake -c rollup.config.mjs",
+    "build": "npm run clean && npm run bundle && ncp appsscript.json dist/appsscript.json",
+    "dev": "tsx src/server.ts",
+    "test": "npm run lint && npx tsc --noEmit && vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
+    "deploy": "npm run build && ncp .clasp-dev.json .clasp.json && clasp push -f",
+    "deploy:stg": "npm run test && npm run build && ncp .clasp-stg.json .clasp.json && clasp push",
+    "deploy:prod": "npm run test && npm run build && ncp .clasp-prod.json .clasp.json && clasp push"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "google-auth-library": "^10.5.0",
+    "googleapis": "^166.0.0",
+    "hono": "^4.7.11"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@hono/node-server": "^1.14.0",
+    "@rollup/plugin-commonjs": "^28.0.2",
+    "@rollup/plugin-node-resolve": "^15.3.0",
+    "@rollup/plugin-replace": "^6.0.3",
+    "@types/google-apps-script": "^2.0.7",
+    "@types/node": "^22.10.5",
+    "@vitest/coverage-v8": "^4.0.13",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-prettier": "^5.2.2",
+    "ncp": "^2.0.0",
+    "prettier": "^3.4.2",
+    "rimraf": "^6.1.2",
+    "rollup": "^4.53.3",
+    "rollup-plugin-cleanup": "^3.2.1",
+    "rollup-plugin-prettier": "^4.1.2",
+    "rollup-plugin-typescript2": "^0.36.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.20.0",
+    "vitest": "^4.0.13"
+  }
+}
+
