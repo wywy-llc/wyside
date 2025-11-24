@@ -9,6 +9,7 @@ export const config: {
   filesMerge: Record<string, string>;
 } = {
   dependencies: [
+    '@hono/node-server',
     '@google/clasp',
     '@rollup/plugin-commonjs',
     '@rollup/plugin-node-resolve',
@@ -26,6 +27,7 @@ export const config: {
     'google-auth-library',
     'googleapis',
     'gts',
+    'hono',
     'ncp',
     'prettier',
     'rimraf',
