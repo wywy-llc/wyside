@@ -27,7 +27,7 @@ export const SheetsClient = (() => {
       'https://www.googleapis.com/auth/spreadsheets',
     ]);
 
-    const response = await fetch(
+    const response = await Fetch.request(
       `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`,
       {
         method: 'POST',
@@ -59,7 +59,7 @@ export const SheetsClient = (() => {
       .map(r => `ranges=${encodeURIComponent(r)}`)
       .join('&');
 
-    const response = await fetch(
+    const response = await Fetch.request(
       `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?${rangesQuery}`,
       {
         method: 'GET',
