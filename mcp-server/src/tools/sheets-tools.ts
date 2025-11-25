@@ -278,10 +278,23 @@ export async function setupNamedRange(
   const messages: string[] = [];
 
   try {
-    const { spreadsheetId, rangeName, range } = args;
+    const { spreadsheetId, rangeName, range: rawRange } = args;
 
-    if (!spreadsheetId || !rangeName || !range) {
+    if (!spreadsheetId || !rangeName || !rawRange) {
       throw new Error('spreadsheetId, rangeName, and range are required');
+    }
+
+    // 範囲指定を正規化
+    let range = rawRange;
+
+    // シェルエスケープされた文字を正規化
+    range = range.replace(/\\!/g, '!'); // \! → !
+
+    // 範囲全体がシングルクォートで囲まれている場合（'Todos!E:E'のような誤った形式）
+    // ただし、Google Sheets形式のシート名エスケープ（'Sheet Name'!A1）は除外
+    if (range.startsWith("'") && range.endsWith("'") && !range.includes("'!")) {
+      // 範囲全体を囲むクォートを削除
+      range = range.slice(1, -1);
     }
 
     messages.push(
