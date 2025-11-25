@@ -101,7 +101,7 @@ type ToolName = keyof typeof TOOL_REGISTRY;
 
 function buildParams(
   rawArgs: string[],
-  argDefs: ArgumentDefinition[],
+  argDefs: ArgumentDefinition[]
 ): Record<string, unknown> {
   const params: Record<string, unknown> = {};
 
@@ -121,10 +121,10 @@ function buildParams(
 }
 
 function generateHelpMessage(): string {
-  const toolLines = Object.keys(TOOL_REGISTRY).map((name) => {
+  const toolLines = Object.keys(TOOL_REGISTRY).map(name => {
     const tool = TOOL_REGISTRY[name as ToolName];
     const args = tool.args
-      .map((a) => (a.required ? `<${a.name}>` : `[${a.name}]`))
+      .map(a => (a.required ? `<${a.name}>` : `[${a.name}]`))
       .join(' ');
     return `  ${name} ${args}`;
   });
