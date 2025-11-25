@@ -1,11 +1,8 @@
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-  type CallToolResult,
-} from '@modelcontextprotocol/sdk/types.js';
+import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { config } from 'dotenv';
+import { z } from 'zod';
 
 import {
   driveCreateFolder,
@@ -40,183 +37,214 @@ const SERVER_CONFIG = {
   VERSION: '1.0.0',
 } as const;
 
-// ツール定義
-const TOOL_DEFINITIONS = [
-  {
-    name: 'sync_secrets_from_gcp_to_local',
-    description:
-      'Auto-configure GCP project, enable APIs, create Service Account, prepare local Sheets API access',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        projectId: {
-          type: 'string',
-          description: 'GCP Project ID (interactive if omitted)',
-        },
-        spreadsheetIdDev: {
-          type: 'string',
-          description: 'Development Spreadsheet ID (required)',
-        },
-        spreadsheetIdProd: {
-          type: 'string',
-          description: 'Production Spreadsheet ID (optional)',
-        },
-      },
-      required: ['spreadsheetIdDev'],
-    },
-  },
-  {
-    name: 'scaffold_feature',
-    description: 'Generate REST API unified repository (GAS/Local dual-mode)',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        featureName: {
-          type: 'string',
-          description: 'Feature name (e.g., "Highlight")',
-        },
-        operations: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'Operations (e.g., ["setBackground"])',
-        },
-      },
-      required: ['featureName', 'operations'],
-    },
-  },
-  {
-    name: 'setup_named_range',
-    description:
-      'Configure named ranges in spreadsheet and sync with code constants',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        spreadsheetId: { type: 'string' },
-        rangeName: {
-          type: 'string',
-          description: 'Range name (e.g., "TODO_RANGE")',
-        },
-        range: {
-          type: 'string',
-          description: 'A1 notation (e.g., "Todos!A2:E")',
-        },
-      },
-      required: ['spreadsheetId', 'rangeName', 'range'],
-    },
-  },
-  {
-    name: 'drive_create_folder',
-    description: 'Create a new folder in Google Drive',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        name: { type: 'string', description: 'Folder name' },
-        parentId: {
-          type: 'string',
-          description: 'Parent folder ID (optional)',
-        },
-      },
-      required: ['name'],
-    },
-  },
-  {
-    name: 'drive_list_files',
-    description: 'List files in Google Drive',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        query: {
-          type: 'string',
-          description: 'Drive search query (optional)',
-        },
-        pageSize: {
-          type: 'number',
-          description: 'Number of files to return',
-        },
-      },
-    },
-  },
-  {
-    name: 'gmail_send_email',
-    description: 'Send an email via Gmail API',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        to: { type: 'string', description: 'Recipient email address' },
-        subject: { type: 'string', description: 'Email subject' },
-        body: { type: 'string', description: 'Email body' },
-      },
-      required: ['to', 'subject', 'body'],
-    },
-  },
-  {
-    name: 'gmail_list_labels',
-    description: 'List Gmail labels',
-    inputSchema: {
-      type: 'object',
-      properties: {},
-    },
-  },
-] as const;
-
 /**
  * MCPサーバーインスタンス
  */
-const server = new Server(
-  { name: SERVER_CONFIG.NAME, version: SERVER_CONFIG.VERSION },
-  { capabilities: { tools: {} } }
+const server = new McpServer({
+  name: SERVER_CONFIG.NAME,
+  version: SERVER_CONFIG.VERSION,
+});
+
+// ツール登録
+server.registerTool(
+  'sync_secrets_from_gcp_to_local',
+  {
+    title: 'Sync Secrets from GCP to Local',
+    description:
+      'Auto-configure GCP project, enable APIs, create Service Account, prepare local Sheets API access',
+    inputSchema: {
+      projectId: z
+        .string()
+        .describe('GCP Project ID (interactive if omitted)')
+        .optional(),
+      spreadsheetIdDev: z
+        .string()
+        .describe('Development Spreadsheet ID (required)'),
+      spreadsheetIdProd: z
+        .string()
+        .describe('Production Spreadsheet ID (optional)')
+        .optional(),
+    },
+  },
+  async (args: SyncSecretsFromGcpToLocalArgs) => {
+    try {
+      return (await syncSecretsFromGcpToLocal(args)) as CallToolResult;
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          },
+        ],
+        isError: true,
+      } as CallToolResult;
+    }
+  }
 );
 
-/**
- * ツール一覧リクエストのハンドラー
- *
- * @remarks 利用可能なツールのリストと各ツールのスキーマを返却
- */
-server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: TOOL_DEFINITIONS,
-}));
-
-/**
- * ツール実行リクエストのハンドラー
- *
- * @remarks ツール名に基づいて適切な関数を呼び出し、結果を返却
- */
-server.setRequestHandler(
-  CallToolRequestSchema,
-  async (request, _extra): Promise<CallToolResult> => {
-    const { name, arguments: args } = request.params;
-
+server.registerTool(
+  'scaffold_feature',
+  {
+    title: 'Scaffold Feature',
+    description: 'Generate REST API unified repository (GAS/Local dual-mode)',
+    inputSchema: {
+      featureName: z.string().describe('Feature name (e.g., "Highlight")'),
+      operations: z
+        .array(z.string())
+        .describe('Operations (e.g., ["setBackground"])'),
+    },
+  },
+  async (args: ScaffoldFeatureArgs) => {
     try {
-      switch (name) {
-        case 'sync_secrets_from_gcp_to_local':
-          return (await syncSecretsFromGcpToLocal(
-            (args || {}) as unknown as SyncSecretsFromGcpToLocalArgs
-          )) as CallToolResult;
-        case 'scaffold_feature':
-          return (await scaffoldFeature(
-            (args || {}) as unknown as ScaffoldFeatureArgs
-          )) as CallToolResult;
-        case 'setup_named_range':
-          return (await setupNamedRange(
-            (args || {}) as unknown as SetupNamedRangeArgs
-          )) as CallToolResult;
-        case 'drive_create_folder':
-          return (await driveCreateFolder(
-            (args || {}) as unknown as CreateFolderArgs
-          )) as CallToolResult;
-        case 'drive_list_files':
-          return (await driveListFiles(
-            (args || {}) as unknown as ListFilesArgs
-          )) as CallToolResult;
-        case 'gmail_send_email':
-          return (await gmailSendEmail(
-            (args || {}) as unknown as SendEmailArgs
-          )) as CallToolResult;
-        case 'gmail_list_labels':
-          return (await gmailListLabels()) as CallToolResult;
-        default:
-          throw new Error(`Unknown tool: ${name}`);
-      }
+      return (await scaffoldFeature(args)) as CallToolResult;
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          },
+        ],
+        isError: true,
+      } as CallToolResult;
+    }
+  }
+);
+
+server.registerTool(
+  'setup_named_range',
+  {
+    title: 'Setup Named Range',
+    description:
+      'Configure named ranges in spreadsheet and sync with code constants',
+    inputSchema: {
+      spreadsheetId: z.string(),
+      rangeName: z.string().describe('Range name (e.g., "TODO_RANGE")'),
+      range: z.string().describe('A1 notation (e.g., "Todos!A2:E")'),
+    },
+  },
+  async (args: SetupNamedRangeArgs) => {
+    try {
+      return (await setupNamedRange(args)) as CallToolResult;
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          },
+        ],
+        isError: true,
+      } as CallToolResult;
+    }
+  }
+);
+
+server.registerTool(
+  'drive_create_folder',
+  {
+    title: 'Create Drive Folder',
+    description: 'Create a new folder in Google Drive',
+    inputSchema: {
+      name: z.string().describe('Folder name'),
+      parentId: z.string().describe('Parent folder ID (optional)').optional(),
+    },
+  },
+  async (args: CreateFolderArgs) => {
+    try {
+      return (await driveCreateFolder(args)) as CallToolResult;
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          },
+        ],
+        isError: true,
+      } as CallToolResult;
+    }
+  }
+);
+
+server.registerTool(
+  'drive_list_files',
+  {
+    title: 'List Drive Files',
+    description: 'List files in Google Drive',
+    inputSchema: {
+      query: z.string().describe('Drive search query (optional)').optional(),
+      pageSize: z.number().describe('Number of files to return').optional(),
+    },
+  },
+  async (args: ListFilesArgs) => {
+    try {
+      return (await driveListFiles(args)) as CallToolResult;
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          },
+        ],
+        isError: true,
+      } as CallToolResult;
+    }
+  }
+);
+
+server.registerTool(
+  'gmail_send_email',
+  {
+    title: 'Send Email',
+    description: 'Send an email via Gmail API',
+    inputSchema: {
+      to: z.string().describe('Recipient email address'),
+      subject: z.string().describe('Email subject'),
+      body: z.string().describe('Email body'),
+    },
+  },
+  async (args: SendEmailArgs) => {
+    try {
+      return (await gmailSendEmail(args)) as CallToolResult;
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          },
+        ],
+        isError: true,
+      } as CallToolResult;
+    }
+  }
+);
+
+server.registerTool(
+  'gmail_list_labels',
+  {
+    title: 'List Gmail Labels',
+    description: 'List Gmail labels',
+    inputSchema: {},
+  },
+  async () => {
+    try {
+      return (await gmailListLabels()) as CallToolResult;
     } catch (error) {
       return {
         content: [
