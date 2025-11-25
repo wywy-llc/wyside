@@ -72,7 +72,7 @@ npm run test:tool scaffold_feature Todo "create,read,update,delete"
 - **Templates (`src/templates/`):**
   - `.hbs` files for scaffolding.
 
-## 5. Schema-Based Code Generation System
+## 5. Schema-Based Code Generation
 
 ### 5.1 Overview
 
@@ -101,12 +101,26 @@ const schema = {
 };
 ```
 
-### 5.3 Extending to Other Google APIs (Drive, Gmail, etc.)
+### 5.3 Reference Files
 
-#### Step 1: googleapis型定義の場所を特定
+**理解すべきファイル（優先度順）:**
+
+1. `docs/flexible-operations.md` - 操作システムの全体像
+2. `docs/schema-based-generation.md` - スキーマベース生成の詳細
+3. `docs/sheets-api-schemas.md` - Sheets API型定義リファレンス
+4. `src/tools/operation-catalog.ts` - 操作定義の実装パターン
+5. `src/tools/schema-generator.ts` - スキーマ生成の実装パターン
+6. `src/templates/universal-repo.ts.hbs` - テンプレートの構造
+
+## 6. API Extension Guide
+
+新しいGoogle API（Drive, Gmail, Calendar等）に対応する際のガイド。
+
+### 6.1 Type Definition Discovery
+
+**googleapis型定義の場所:**
 
 ```bash
-# 型定義ファイルの場所
 node_modules/googleapis/build/src/apis/{api-name}/{version}.d.ts
 
 # 例:
@@ -115,8 +129,6 @@ node_modules/googleapis/build/src/apis/{api-name}/{version}.d.ts
 # - Gmail: node_modules/googleapis/build/src/apis/gmail/v1.d.ts
 # - Calendar: node_modules/googleapis/build/src/apis/calendar/v3.d.ts
 ```
-
-#### Step 2: 重要な型定義を抽出
 
 **抽出対象:**
 
@@ -135,24 +147,27 @@ grep -n "export interface Schema" node_modules/googleapis/build/src/apis/drive/v
 grep -A 50 "export interface Schema\$File {" node_modules/googleapis/build/src/apis/drive/v3.d.ts
 ```
 
-**Drive API例:**
+**Context7での調査:**
 
 ```typescript
-// 型定義の場所: drive/v3.d.ts
-export interface Schema$File {
-  id?: string | null;
-  name?: string | null;
-  mimeType?: string | null;
-  parents?: string[] | null;
-  createdTime?: string | null;
-  modifiedTime?: string | null;
-  // ... その他のフィールド
-}
+// 1. Library IDを解決
+mcp__context7__resolve - library - id({ libraryName: 'googleapis' });
+// Result: /websites/googleapis_dev_nodejs_googleapis
+
+// 2. API固有のドキュメントを取得
+mcp__context7__get -
+  library -
+  docs({
+    context7CompatibleLibraryID: '/websites/googleapis_dev_nodejs_googleapis',
+    topic: 'drive_v3 Schema File create update',
+    mode: 'code',
+  });
+
+// 3. 型定義の詳細を確認
+Read({ file_path: 'node_modules/googleapis/build/src/apis/drive/v3.d.ts' });
 ```
 
-#### Step 3: APIスキーマの構造を理解
-
-**Sheets API vs Drive API の違い:**
+### 6.2 API Data Structure Patterns
 
 | API      | データ構造             | 主な操作                            |
 | -------- | ---------------------- | ----------------------------------- |
@@ -163,31 +178,43 @@ export interface Schema$File {
 
 **スキーマ変換の方針:**
 
-1. **Sheets型（行列データ）**:
+```typescript
+// Sheets型（行列データ）: フィールド → 列のマッピング
+{ name: 'title', column: 'B' }
 
-   ```typescript
-   // フィールド → 列のマッピングが必要
-   { name: 'title', column: 'B' }
-   ```
+// オブジェクト型（Drive/Gmail/Calendar）: プロパティ直接マッピング
+{ name: 'title', property: 'name' }
+{ name: 'mimeType', property: 'mimeType' }
+```
 
-2. **オブジェクト型（Drive/Gmail/Calendar）**:
+**Drive API型定義例:**
 
-   ```typescript
-   // 直接オブジェクトのプロパティにマッピング
-   { name: 'title', property: 'name' }
-   { name: 'mimeType', property: 'mimeType' }
-   ```
+```typescript
+// drive/v3.d.ts
+export interface Schema$File {
+  id?: string | null;
+  name?: string | null;
+  mimeType?: string | null;
+  parents?: string[] | null;
+  createdTime?: string | null;
+  modifiedTime?: string | null;
+}
+```
 
-#### Step 4: 新しいAPI用のスキーマジェネレーターを作成
+### 6.3 Schema Generator & Operation Catalog
 
 **ファイル構成:**
 
-```
+```bash
 src/tools/
   ├── schema-generator.ts         # 共通インターフェース
   ├── sheets-schema-generator.ts  # Sheets専用（現行）
   ├── drive-schema-generator.ts   # Drive用（新規）
   └── gmail-schema-generator.ts   # Gmail用（新規）
+  ├── operation-catalog.ts           # 共通インターフェース
+  ├── sheets-operation-catalog.ts    # Sheets操作（現行）
+  ├── drive-operation-catalog.ts     # Drive操作（新規）
+  └── gmail-operation-catalog.ts     # Gmail操作（新規）
 ```
 
 **Drive用スキーマジェネレーター例:**
@@ -223,18 +250,6 @@ export function generateObjectToDriveFile(
 }
 ```
 
-#### Step 5: 新しいAPI用の操作カタログを作成
-
-**ファイル構成:**
-
-```
-src/tools/
-  ├── operation-catalog.ts           # 共通インターフェース
-  ├── sheets-operation-catalog.ts    # Sheets操作（現行）
-  ├── drive-operation-catalog.ts     # Drive操作（新規）
-  └── gmail-operation-catalog.ts     # Gmail操作（新規）
-```
-
 **Drive用操作カタログ例:**
 
 ```typescript
@@ -259,7 +274,6 @@ export const DRIVE_OPERATION_CATALOG = {
       return response.data.files || [];
     };`,
   },
-
   createFile: {
     id: 'createFile',
     category: 'write',
@@ -277,43 +291,11 @@ export const DRIVE_OPERATION_CATALOG = {
       return response.data;
     };`,
   },
-
   // ... その他の操作
 };
 ```
 
-#### Step 6: Context7でAPI型定義を調査
-
-**手順:**
-
-1. **Library IDを解決**:
-
-   ```typescript
-   mcp__context7__resolve - library - id({ libraryName: 'googleapis' });
-   // Result: /websites/googleapis_dev_nodejs_googleapis
-   ```
-
-2. **API固有のドキュメントを取得**:
-
-   ```typescript
-   mcp__context7__get -
-     library -
-     docs({
-       context7CompatibleLibraryID:
-         '/websites/googleapis_dev_nodejs_googleapis',
-       topic: 'drive_v3 Schema File create update',
-       mode: 'code',
-     });
-   ```
-
-3. **型定義の詳細を確認**:
-
-   ```bash
-   # ローカルで型定義を読む
-   Read({ file_path: 'node_modules/googleapis/build/src/apis/drive/v3.d.ts' })
-   ```
-
-### 5.4 実装チェックリスト
+### 6.4 Implementation Checklist
 
 新しいGoogle APIに対応する際のチェックリスト:
 
@@ -339,18 +321,7 @@ export const DRIVE_OPERATION_CATALOG = {
   - [ ] `docs/{api}-schemas.md`
   - [ ] `docs/{api}-operations.md`
 
-### 5.6 Reference Files
-
-**理解すべきファイル（優先度順）:**
-
-1. **`docs/flexible-operations.md`** - 操作システムの全体像
-2. **`docs/schema-based-generation.md`** - スキーマベース生成の詳細
-3. **`docs/sheets-api-schemas.md`** - Sheets API型定義リファレンス
-4. **`src/tools/operation-catalog.ts`** - 操作定義の実装パターン
-5. **`src/tools/schema-generator.ts`** - スキーマ生成の実装パターン
-6. **`src/templates/universal-repo.ts.hbs`** - テンプレートの構造
-
-## 6. Guidelines
+## 7. Guidelines
 
 - **Error Handling:** Return `isError: true` with user-friendly messages in the `content`.
 - **Logging:** Use `console.error` for logs (stdout is reserved for MCP JSON-RPC).
