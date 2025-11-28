@@ -64,6 +64,10 @@ server.registerTool(
         .string()
         .describe('Production Spreadsheet ID (optional)')
         .optional(),
+      force: z
+        .boolean()
+        .describe('Force regenerate service account key (delete existing file)')
+        .optional(),
     },
   },
   async (args: SyncSecretsFromGcpToLocalArgs) => {

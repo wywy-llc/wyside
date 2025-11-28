@@ -137,28 +137,51 @@ async function ensureServiceAccount(
 async function createServiceAccountKey(
   saEmail: string,
   projectId: string,
-  messages: string[]
+  messages: string[],
+  force?: boolean
 ): Promise<string> {
   const secretsDir = path.join(process.cwd(), 'secrets');
   await fs.mkdir(secretsDir, { recursive: true });
   const keyPath = path.join(secretsDir, 'service-account.json');
 
-  if (await fileExists(keyPath)) {
-    messages.push(`Key file already exists at ${keyPath}. Skipping creation.`);
-  } else {
-    messages.push(`Creating key file at ${keyPath}...`);
-    await execa('gcloud', [
-      'iam',
-      'service-accounts',
-      'keys',
-      'create',
-      keyPath,
-      '--iam-account',
-      saEmail,
-      '--project',
-      projectId,
-    ]);
+  const keyFileExists = await fileExists(keyPath);
+
+  // 既存ファイル処理
+  if (keyFileExists) {
+    if (force) {
+      messages.push(chalk.yellow('🔄 Force update: Removing old key...'));
+      try {
+        await fs.rm(keyPath, { force: true });
+        messages.push(chalk.green('✅ Old key deleted successfully'));
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        messages.push(
+          chalk.red(`⚠️  Warning: Failed to delete old key: ${errorMsg}`)
+        );
+        messages.push(chalk.yellow('Continuing with new key creation...'));
+      }
+    } else {
+      messages.push(
+        `✅ Key file already exists at ${keyPath}. Use force=true to update.`
+      );
+      return keyPath;
+    }
   }
+
+  // 新規キー作成
+  messages.push(`📝 Creating key file at ${keyPath}...`);
+  await execa('gcloud', [
+    'iam',
+    'service-accounts',
+    'keys',
+    'create',
+    keyPath,
+    '--iam-account',
+    saEmail,
+    '--project',
+    projectId,
+  ]);
+  messages.push(chalk.green('✅ New key created successfully'));
 
   return keyPath;
 }
@@ -215,6 +238,7 @@ export interface SyncSecretsFromGcpToLocalArgs {
   projectId?: string;
   spreadsheetIdDev: string;
   spreadsheetIdProd?: string;
+  force?: boolean;
 }
 
 /**
@@ -239,7 +263,7 @@ export async function syncSecretsFromGcpToLocal(
 
     await enableGoogleApis(projectId, messages);
     const saEmail = await ensureServiceAccount(projectId, messages);
-    await createServiceAccountKey(saEmail, projectId, messages);
+    await createServiceAccountKey(saEmail, projectId, messages, args.force);
     await updateEnvFile(
       projectId,
       args.spreadsheetIdDev,
