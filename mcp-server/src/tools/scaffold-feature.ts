@@ -34,14 +34,35 @@ const TEMPLATE_DIRS = {
 } as const;
 
 /**
- * スキャフォールド機能の引数
+ * Scaffold機能の引数インターフェース
+ *
+ * 新しい機能を scaffolding する際に必要なパラメータを定義します。
+ * 機能名、操作リスト、およびスキーマ情報を含みます。
+ *
+ * @interface ScaffoldFeatureArgs
+ *
+ * @property {string} featureName - 生成する機能の名前（例: "Todo", "Schedule"）
+ * @property {string[]} [operations] - 生成する操作のリスト（例: ["create", "read", "update"]）。省略可能
+ * @property {FeatureSchema} [schema] - 機能のスキーマ定義。省略可能
+ *
+ * @example
+ * ```typescript
+ * const args: ScaffoldFeatureArgs = {
+ *   featureName: "Todo",
+ *   operations: ["create", "read", "update"],
+ *   schema: {
+ *     fields: [
+ *       { name: "id", type: "string", column: "A" },
+ *       { name: "name", type: "string", column: "B" }
+ *     ],
+ *     range: "Items!A2:B"
+ *   }
+ * };
+ * ```
  */
 export interface ScaffoldFeatureArgs {
-  /** 機能名（例: "Todo", "Schedule"） */
   featureName: string;
-  /** 生成する操作のリスト（例: ["create", "read", "update"]） */
   operations?: string[];
-  /** スキーマ定義（オプション） */
   schema?: FeatureSchema;
 }
 
