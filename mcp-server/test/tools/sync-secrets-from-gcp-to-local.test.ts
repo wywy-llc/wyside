@@ -62,9 +62,15 @@ describe('sync-secrets-from-gcp-to-local', () => {
         }
         if (cmd === 'gcloud' && args[0] === 'iam') {
           if (args[1] === 'service-accounts' && args[2] === 'describe') {
-            return Promise.resolve({ stdout: 'email: wyside@test-project.iam.gserviceaccount.com' });
+            return Promise.resolve({
+              stdout: 'email: wyside@test-project.iam.gserviceaccount.com',
+            });
           }
-          if (args[1] === 'service-accounts' && args[2] === 'keys' && args[3] === 'create') {
+          if (
+            args[1] === 'service-accounts' &&
+            args[2] === 'keys' &&
+            args[3] === 'create'
+          ) {
             return Promise.resolve({});
           }
         }
@@ -106,7 +112,9 @@ describe('sync-secrets-from-gcp-to-local', () => {
         );
 
         // (2) 成功メッセージを返す
-        expect(result.content[0].text).toContain('Local secrets setup complete');
+        expect(result.content[0].text).toContain(
+          'Local secrets setup complete'
+        );
         expect(result.isError).toBeUndefined();
       });
 
@@ -123,7 +131,7 @@ describe('sync-secrets-from-gcp-to-local', () => {
         // 検証:
         // (1) キー作成コマンドは呼ばれない
         const keyCreateCalls = mockExeca.mock.calls.filter(
-          (call) =>
+          call =>
             call[0] === 'gcloud' &&
             call[1]?.includes('keys') &&
             call[1]?.includes('create')
@@ -131,13 +139,13 @@ describe('sync-secrets-from-gcp-to-local', () => {
         expect(keyCreateCalls).toHaveLength(0);
 
         // (2) スキップメッセージが含まれる
-        expect(result.content[0].text).toContain(
-          'Key file already exists'
-        );
+        expect(result.content[0].text).toContain('Key file already exists');
         expect(result.content[0].text).toContain('Use force=true to update');
 
         // (3) 成功として完了
-        expect(result.content[0].text).toContain('Local secrets setup complete');
+        expect(result.content[0].text).toContain(
+          'Local secrets setup complete'
+        );
       });
     });
 
@@ -160,8 +168,12 @@ describe('sync-secrets-from-gcp-to-local', () => {
         );
 
         // (2) 削除成功メッセージが含まれる
-        expect(result.content[0].text).toContain('Force update: Removing old key');
-        expect(result.content[0].text).toContain('Old key deleted successfully');
+        expect(result.content[0].text).toContain(
+          'Force update: Removing old key'
+        );
+        expect(result.content[0].text).toContain(
+          'Old key deleted successfully'
+        );
 
         // (3) 新規キーが作成された
         expect(mockExeca).toHaveBeenCalledWith(
@@ -177,7 +189,9 @@ describe('sync-secrets-from-gcp-to-local', () => {
 
         // (4) 新規作成成功メッセージが含まれる
         expect(result.content[0].text).toContain('Creating key file');
-        expect(result.content[0].text).toContain('New key created successfully');
+        expect(result.content[0].text).toContain(
+          'New key created successfully'
+        );
       });
 
       it('キーファイル不存在時、通常通り新規作成される', async () => {
@@ -197,16 +211,13 @@ describe('sync-secrets-from-gcp-to-local', () => {
         // (2) 新規キー作成が実行される
         expect(mockExeca).toHaveBeenCalledWith(
           'gcloud',
-          expect.arrayContaining([
-            'iam',
-            'service-accounts',
-            'keys',
-            'create',
-          ])
+          expect.arrayContaining(['iam', 'service-accounts', 'keys', 'create'])
         );
 
         // (3) 成功メッセージを返す
-        expect(result.content[0].text).toContain('New key created successfully');
+        expect(result.content[0].text).toContain(
+          'New key created successfully'
+        );
       });
 
       it('削除失敗時、警告を表示して新規作成を続行', async () => {
@@ -242,7 +253,9 @@ describe('sync-secrets-from-gcp-to-local', () => {
         );
 
         // (4) 成功として完了
-        expect(result.content[0].text).toContain('Local secrets setup complete');
+        expect(result.content[0].text).toContain(
+          'Local secrets setup complete'
+        );
         expect(result.isError).toBeUndefined();
       });
     });
@@ -263,7 +276,7 @@ describe('sync-secrets-from-gcp-to-local', () => {
         expect(mockFsWriteFile).toHaveBeenCalled();
 
         // (2) 本番環境IDが含まれる
-        const writeCall = mockFsWriteFile.mock.calls.find((call) =>
+        const writeCall = mockFsWriteFile.mock.calls.find(call =>
           call[0].endsWith('.env')
         );
         expect(writeCall).toBeDefined();

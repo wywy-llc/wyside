@@ -60,9 +60,21 @@ const TOOL_REGISTRY = {
       { name: 'featureName', required: true, index: 1 },
       {
         name: 'operations',
-        required: true,
+        required: false,
         index: 2,
-        transform: (value: string) => value.split(','),
+        transform: (value: string) => {
+          try {
+            return JSON.parse(value);
+          } catch {
+            return value.split(',');
+          }
+        },
+      },
+      {
+        name: 'schema',
+        required: false,
+        index: 3,
+        transform: (value: string) => JSON.parse(value),
       },
     ],
     handler: scaffoldFeature,
@@ -138,7 +150,7 @@ ${toolLines.join('\n')}
 Examples:
   npx tsx scripts/test-tool.ts sync_secrets_from_gcp_to_local my-project-123
   npx tsx scripts/test-tool.ts sync_secrets_from_gcp_to_local my-project-123 1ABC_DEV 1XYZ_PROD
-  npx tsx scripts/test-tool.ts scaffold_feature Todo "create,read,update,delete"
+  npx tsx scripts/test-tool.ts scaffold_feature Todo '["create","read","update"]' '{"fields":[{"name":"id","type":"string","column":"A"}],"range":"A2:Z"}'
   npx tsx scripts/test-tool.ts setup_named_range 1ABC123 TODO_RANGE "Sheet1!A2:E"
   npx tsx scripts/test-tool.ts drive_create_folder "Test Folder"
   npx tsx scripts/test-tool.ts gmail_send_email "test@example.com" "Subject" "Body"

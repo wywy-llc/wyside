@@ -102,7 +102,9 @@ const FEATURE_SCHEMA_PRESETS = {
     rangeName: 'SETTING_RANGE',
   },
   itemWithQuantity: {
-    fields: [{ name: 'quantity', type: 'number', column: 'A' }] as FieldSchema[],
+    fields: [
+      { name: 'quantity', type: 'number', column: 'A' },
+    ] as FieldSchema[],
     range: 'Items!A2:A',
     rangeName: 'ITEM_RANGE',
   },
@@ -164,7 +166,9 @@ const featureSchemaFactory = Factory.Sync.makeFactory<FeatureSchema>({
  * @internal
  */
 const createPreset =
-  (definition: (typeof FEATURE_SCHEMA_PRESETS)[keyof typeof FEATURE_SCHEMA_PRESETS]) =>
+  (
+    definition: (typeof FEATURE_SCHEMA_PRESETS)[keyof typeof FEATURE_SCHEMA_PRESETS]
+  ) =>
   (overrides?: Partial<FeatureSchema>) =>
     featureSchemaFactory.build({ ...definition, ...overrides });
 
@@ -289,7 +293,9 @@ export const FeatureSchemaFactory = {
    * User（email required, age optional）プリセット
    * @example const schema = FeatureSchemaFactory.userWithEmailRequired();
    */
-  userWithEmailRequired: createPreset(FEATURE_SCHEMA_PRESETS.userWithEmailRequired),
+  userWithEmailRequired: createPreset(
+    FEATURE_SCHEMA_PRESETS.userWithEmailRequired
+  ),
 
   /**
    * Note（no required fields）プリセット

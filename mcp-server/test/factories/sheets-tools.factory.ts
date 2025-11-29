@@ -170,7 +170,9 @@ export const SetupNamedRangeArgsFactory = {
    * シングルクォート付きシート名プリセット
    * @example const args = SetupNamedRangeArgsFactory.withQuotedSheetName();
    */
-  withQuotedSheetName: createPreset(SETUP_NAMED_RANGE_PRESETS.withQuotedSheetName),
+  withQuotedSheetName: createPreset(
+    SETUP_NAMED_RANGE_PRESETS.withQuotedSheetName
+  ),
 
   /**
    * シェルエスケープされた記号プリセット
@@ -200,7 +202,9 @@ export const SetupNamedRangeArgsFactory = {
    * 空のスプレッドシートIDプリセット（エラーテスト用）
    * @example const args = SetupNamedRangeArgsFactory.emptySpreadsheetId();
    */
-  emptySpreadsheetId: createPreset(SETUP_NAMED_RANGE_PRESETS.emptySpreadsheetId),
+  emptySpreadsheetId: createPreset(
+    SETUP_NAMED_RANGE_PRESETS.emptySpreadsheetId
+  ),
 } as const;
 
 /**

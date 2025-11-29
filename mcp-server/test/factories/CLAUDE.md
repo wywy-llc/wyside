@@ -76,8 +76,10 @@ const USER_PRESETS = {
 } as const;
 
 // 2. Helper（共通ロジック集約）
-const createPreset = (def: typeof USER_PRESETS[keyof typeof USER_PRESETS]) =>
-  (overrides?: Partial<User>) => userFactory.build({ ...def, ...overrides });
+const createPreset =
+  (def: (typeof USER_PRESETS)[keyof typeof USER_PRESETS]) =>
+  (overrides?: Partial<User>) =>
+    userFactory.build({ ...def, ...overrides });
 
 // 3. 1行メソッド（重複排除）
 export const UserFactory = {

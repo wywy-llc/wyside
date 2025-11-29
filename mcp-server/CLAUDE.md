@@ -26,9 +26,9 @@ core_libs:
 ```yaml
 commands:
   install: npm install
-  build: npm run build      # → build/
-  dev: npm run dev          # watch mode
-  start: npm start          # stdio mode
+  build: npm run build # → build/
+  dev: npm run dev # watch mode
+  start: npm start # stdio mode
 
 tool_test:
   workflow: |
@@ -73,10 +73,10 @@ Schema-driven CRUD code generator. Current: Sheets API. Extensible: Drive/Gmail/
 
 ```yaml
 core_files:
-  generator: src/tools/schema-generator.ts        # Type defs & converters
-  catalog: src/tools/operation-catalog.ts         # 16 operations
-  reference: docs/sheets-api-schemas.md           # API type ref
-  guide: docs/flexible-operations.md              # System overview
+  generator: src/tools/schema-generator.ts # Type defs & converters
+  catalog: src/tools/operation-catalog.ts # 16 operations
+  reference: docs/sheets-api-schemas.md # API type ref
+  guide: docs/flexible-operations.md # System overview
 
 schema_example: |
   {
@@ -135,10 +135,10 @@ context7_workflow: |
 
 ```yaml
 data_structures:
-  Sheets:   {type: 2D array, ops: [batchGet, batchUpdate, appendValues]}
-  Drive:    {type: file object, ops: [list, get, create, update, delete]}
-  Gmail:    {type: message object, ops: [list, get, send, modify]}
-  Calendar: {type: event object, ops: [list, get, insert, update, delete]}
+  Sheets: { type: 2D array, ops: [batchGet, batchUpdate, appendValues] }
+  Drive: { type: file object, ops: [list, get, create, update, delete] }
+  Gmail: { type: message object, ops: [list, get, send, modify] }
+  Calendar: { type: event object, ops: [list, get, insert, update, delete] }
 
 schema_mapping:
   sheets: "{ name: 'title', column: 'B' }"
@@ -208,23 +208,23 @@ steps:
   2: Extract Schema types (list, get, create, etc.)
   3: Understand data structure (array vs object)
   4: Create {api}-schema-generator.ts
-     - FieldSchema interface
-     - FeatureSchema interface
-     - Type definition generator
-     - Object converter
+    - FieldSchema interface
+    - FeatureSchema interface
+    - Type definition generator
+    - Object converter
   5: Create {api}-operation-catalog.ts
-     - 10-15 operations
-     - Categorize (query, write, delete, batch)
-     - Code generation functions
+    - 10-15 operations
+    - Categorize (query, write, delete, batch)
+    - Code generation functions
   6: Extend scaffold-feature.ts
-     - API detection logic
-     - Generator/catalog selector
+    - API detection logic
+    - Generator/catalog selector
   7: Create templates
-     - universal-{api}-repo.ts.hbs
-     - {api}-usecase.ts.hbs
+    - universal-{api}-repo.ts.hbs
+    - {api}-usecase.ts.hbs
   8: Create docs
-     - docs/{api}-schemas.md
-     - docs/{api}-operations.md
+    - docs/{api}-schemas.md
+    - docs/{api}-operations.md
 ```
 
 ## 7. Guidelines

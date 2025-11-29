@@ -115,12 +115,7 @@
           Add
         </button>
       </form>
-      <div
-        id="todo-list"
-        role="list"
-        aria-live="polite"
-        aria-label="Todo list"
-      >
+      <div id="todo-list" role="list" aria-live="polite" aria-label="Todo list">
         Loading...
       </div>
     </main>
@@ -130,7 +125,11 @@
         'use strict';
 
         // Check if Google Apps Script API is available
-        if (typeof google === 'undefined' || !google.script || !google.script.run) {
+        if (
+          typeof google === 'undefined' ||
+          !google.script ||
+          !google.script.run
+        ) {
           console.warn('Google Apps Script API not available');
           return;
         }
@@ -157,7 +156,8 @@
           } else {
             todos.forEach(todo => {
               const div = document.createElement('div');
-              div.className = 'todo-item ' + (todo.completed ? 'completed' : '');
+              div.className =
+                'todo-item ' + (todo.completed ? 'completed' : '');
               div.setAttribute('role', 'listitem');
               div.dataset.id = todo.id;
 
@@ -165,7 +165,10 @@
               const checkbox = document.createElement('input');
               checkbox.type = 'checkbox';
               checkbox.checked = todo.completed;
-              checkbox.setAttribute('aria-label', 'Mark as ' + (todo.completed ? 'incomplete' : 'complete'));
+              checkbox.setAttribute(
+                'aria-label',
+                'Mark as ' + (todo.completed ? 'incomplete' : 'complete')
+              );
 
               // Create text span
               const span = document.createElement('span');
@@ -177,7 +180,10 @@
               deleteBtn.className = 'delete-btn';
               deleteBtn.type = 'button';
               deleteBtn.textContent = '×';
-              deleteBtn.setAttribute('aria-label', 'Delete task: ' + todo.title);
+              deleteBtn.setAttribute(
+                'aria-label',
+                'Delete task: ' + todo.title
+              );
 
               div.appendChild(checkbox);
               div.appendChild(span);
@@ -327,7 +333,7 @@
         addForm.addEventListener('submit', handleAddSubmit);
 
         // Event delegation for todo list
-        todoListEl.addEventListener('change', (e) => {
+        todoListEl.addEventListener('change', e => {
           if (e.target.type === 'checkbox') {
             const item = e.target.closest('[data-id]');
             if (item) {
@@ -336,7 +342,7 @@
           }
         });
 
-        todoListEl.addEventListener('click', (e) => {
+        todoListEl.addEventListener('click', e => {
           if (e.target.classList.contains('delete-btn')) {
             const item = e.target.closest('[data-id]');
             if (item) {
