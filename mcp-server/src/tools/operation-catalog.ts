@@ -58,8 +58,46 @@ export interface OperationContext {
   params?: Record<string, any>;
 }
 
+/**
+ * デフォルト値定数
+ */
+const DEFAULTS = {
+  SHEET_NAME: 'Sheet1',
+  KEY_FIELD: 'id',
+  FIRST_COL: 'A',
+  LAST_COL: 'Z',
+} as const;
+
+/**
+ * スキーマから主キーフィールド名を取得
+ * @param schema - 機能スキーマ
+ * @returns 主キーフィールド名（デフォルト: 'id'）
+ */
+function getKeyField(schema?: FeatureSchema): string {
+  return schema?.fields?.[0]?.name ?? DEFAULTS.KEY_FIELD;
+}
+
+/**
+ * スキーマにidフィールドが存在するか確認
+ * @param schema - 機能スキーマ
+ * @returns idフィールドの存在有無
+ */
+function hasIdField(schema?: FeatureSchema): boolean {
+  return schema?.fields?.some(f => f.name === DEFAULTS.KEY_FIELD) ?? false;
+}
+
+/**
+ * スキーマからシート名を取得
+ * @param schema - 機能スキーマ
+ * @returns シート名（デフォルト: 'Sheet1'）
+ */
+function getSheetName(schema?: FeatureSchema): string {
+  return schema?.sheetName ?? DEFAULTS.SHEET_NAME;
+}
+
 function getColumnBounds(schema?: FeatureSchema) {
-  if (!schema) return { firstCol: 'A', lastCol: 'A' };
+  if (!schema)
+    return { firstCol: DEFAULTS.FIRST_COL, lastCol: DEFAULTS.FIRST_COL };
   const cols = schema.fields.map(f => f.column).sort();
   return { firstCol: cols[0], lastCol: cols[cols.length - 1] };
 }
@@ -71,8 +109,8 @@ function getDataRange(ctx: OperationContext): string {
   const header = schema?.headerRange;
   let headerRow = 1;
   if (header) {
-    const match = header.match(/(?<row>\d+)/);
-    if (match?.groups?.row) headerRow = Number(match.groups.row);
+    const match = header.match(/\d+/);
+    if (match) headerRow = Number(match[0]);
   }
   const dataStart = headerRow + 1;
   return `${sheet}!${firstCol}${dataStart}:${lastCol}`;
@@ -111,7 +149,7 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
     ],
     returnType: '{{featureName}} | null',
     generate: ctx => {
-      const keyField = ctx.schema?.fields?.[0]?.name ?? 'id';
+      const keyField = getKeyField(ctx.schema);
       return `
     const getById = async (${keyField}: string): Promise<${ctx.featureName} | null> => {
       const items = await getAll();
@@ -135,12 +173,11 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
     ],
     returnType: '{{featureName}}',
     generate: ctx => {
-      const hasIdField =
-        ctx.schema?.fields?.some(f => f.name === 'id') ?? false;
+      const hasId = hasIdField(ctx.schema);
       return `
     const create = async (data: Partial<${ctx.featureName}>): Promise<${ctx.featureName}> => {
       const item: ${ctx.featureName} = {
-        ${hasIdField ? 'id: generateUuid(),' : ''}
+        ${hasId ? 'id: generateUuid(),' : ''}
         ...data,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -169,7 +206,8 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
     ],
     returnType: 'void',
     generate: ctx => {
-      const keyField = ctx.schema?.fields?.[0]?.name ?? 'id';
+      const keyField = getKeyField(ctx.schema);
+      const sheetName = getSheetName(ctx.schema);
       return `
     const update = async (${keyField}: string, updates: Partial<${ctx.featureName}>): Promise<void> => {
       const items = await getAll();
@@ -185,8 +223,7 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
       };
 
       const values = ${ctx.featureNameCamel}ToRow(updated);
-      const sheetName = '${ctx.schema?.sheetName ?? 'Sheet1'}';
-      const range = \`\${sheetName}!A\${rowNumber}:Z\${rowNumber}\`;
+      const range = \`${sheetName}!A\${rowNumber}:Z\${rowNumber}\`;
       await SheetsClient.updateValues(spreadsheetId, range, [values]);
     };`;
     },
@@ -202,7 +239,8 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
     ],
     returnType: 'void',
     generate: ctx => {
-      const keyField = ctx.schema?.fields?.[0]?.name ?? 'id';
+      const keyField = getKeyField(ctx.schema);
+      const sheetName = getSheetName(ctx.schema);
       return `
     const deleteById = async (${keyField}: string): Promise<void> => {
       const items = await getAll();
@@ -210,8 +248,7 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
       if (index === -1) throw new Error(\`${ctx.featureName} \${${keyField}} not found\`);
 
       const rowNumber = index + 2;
-      const sheetName = '${ctx.schema?.sheetName ?? 'Sheet1'}';
-      const range = \`\${sheetName}!A\${rowNumber}:Z\${rowNumber}\`;
+      const range = \`${sheetName}!A\${rowNumber}:Z\${rowNumber}\`;
 
       const emptyValues = new Array(${ctx.schema?.fields.length || 10}).fill('');
       await SheetsClient.updateValues(spreadsheetId, range, [emptyValues]);
@@ -374,12 +411,11 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
     ],
     returnType: '{{featureName}}[]',
     generate: ctx => {
-      const hasIdField =
-        ctx.schema?.fields?.some(f => f.name === 'id') ?? false;
+      const hasId = hasIdField(ctx.schema);
       return `
     const batchCreate = async (items: Partial<${ctx.featureName}>[]): Promise<${ctx.featureName}[]> => {
       const created = items.map(data => ({
-        ${hasIdField ? 'id: generateUuid(),' : ''}
+        ${hasId ? 'id: generateUuid(),' : ''}
         ...data,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -407,29 +443,30 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
     ],
     returnType: 'void',
     generate: ctx => {
-      const keyField = ctx.schema?.fields?.[0]?.name ?? 'id';
+      const keyField = getKeyField(ctx.schema);
+      const sheetName = getSheetName(ctx.schema);
       return `
     const batchUpdate = async (updates: Array<{ id: string; data: Partial<${ctx.featureName}> }>): Promise<void> => {
       const items = await getAll();
       const updateMap = new Map(updates.map(u => [u.id, u.data]));
 
-      const valueRanges = items
-        .map((item, index) => {
-          const key = item.${keyField};
-          if (key === undefined || key === null || key === '') return null;
-          const updateData = updateMap.get(key as string);
-          if (!updateData) return null;
+      const valueRanges = items.reduce<Array<{ range: string; values: any[][] }>>((acc, item, index) => {
+        const key = item.${keyField};
+        if (key === undefined || key === null || key === '') return acc;
+        
+        const updateData = updateMap.get(key as string);
+        if (!updateData) return acc;
 
-          const updated = { ...item, ...updateData, updatedAt: new Date().toISOString() };
-          const rowNumber = index + 2;
-          const sheetName = '${ctx.schema?.sheetName ?? 'Sheet1'}';
+        const updated = { ...item, ...updateData, updatedAt: new Date().toISOString() };
+        const rowNumber = index + 2;
 
-          return {
-            range: \`\${sheetName}!A\${rowNumber}:Z\${rowNumber}\`,
-            values: [${ctx.featureNameCamel}ToRow(updated)],
-          };
-        })
-        .filter((vr): vr is { range: string; values: any[][] } => vr !== null);
+        acc.push({
+          range: \`${sheetName}!A\${rowNumber}:Z\${rowNumber}\`,
+          values: [${ctx.featureNameCamel}ToRow(updated)],
+        });
+        
+        return acc;
+      }, []);
 
       if (valueRanges.length > 0) {
         await SheetsClient.batchUpdateValues(spreadsheetId, valueRanges);
@@ -495,16 +532,13 @@ export function generateOperationsCodes(
  * 操作のエクスポートリストを生成
  */
 export function generateExportsList(operationIds: string[]): string {
-  const exports = operationIds
-    .map(id => {
-      const def = getOperationDefinition(id);
-      if (!def) return null;
-
-      // 'delete' -> 'deleteById' のマッピング
-      const exportName = id === 'delete' ? 'deleteById' : id;
-      return exportName;
-    })
-    .filter(Boolean);
+  const exports = operationIds.reduce<string[]>((acc, id) => {
+    const def = OPERATION_CATALOG[id];
+    if (def) {
+      acc.push(id === 'delete' ? 'deleteById' : id);
+    }
+    return acc;
+  }, []);
 
   return exports.join(',\n      ');
 }
