@@ -90,11 +90,14 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
       { name: 'id', type: 'string', required: true, description: 'データID' },
     ],
     returnType: '{{featureName}} | null',
-    generate: ctx => `
-    const getById = async (id: string): Promise<${ctx.featureName} | null> => {
+    generate: ctx => {
+      const keyField = ctx.schema?.fields?.[0]?.name ?? 'id';
+      return `
+    const getById = async (${keyField}: string): Promise<${ctx.featureName} | null> => {
       const items = await getAll();
-      return items.find(item => item.id === id) || null;
-    };`,
+      return items.find(item => item.${keyField} === ${keyField}) || null;
+    };`;
+    },
   },
 
   create: {
@@ -111,10 +114,13 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
       },
     ],
     returnType: '{{featureName}}',
-    generate: ctx => `
+    generate: ctx => {
+      const hasIdField =
+        ctx.schema?.fields?.some(f => f.name === 'id') ?? false;
+      return `
     const create = async (data: Partial<${ctx.featureName}>): Promise<${ctx.featureName}> => {
       const item: ${ctx.featureName} = {
-        id: generateUuid(),
+        ${hasIdField ? 'id: generateUuid(),' : ''}
         ...data,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -123,7 +129,8 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
       const rowValues = ${ctx.featureNameCamel}ToRow(item);
       await SheetsClient.appendValues(spreadsheetId, ${ctx.rangeName || `'${ctx.schema?.range}'`}, [rowValues]);
       return item;
-    };`,
+    };`;
+    },
   },
 
   update: {
@@ -141,11 +148,13 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
       },
     ],
     returnType: 'void',
-    generate: ctx => `
-    const update = async (id: string, updates: Partial<${ctx.featureName}>): Promise<void> => {
+    generate: ctx => {
+      const keyField = ctx.schema?.fields?.[0]?.name ?? 'id';
+      return `
+    const update = async (${keyField}: string, updates: Partial<${ctx.featureName}>): Promise<void> => {
       const items = await getAll();
-      const index = items.findIndex(item => item.id === id);
-      if (index === -1) throw new Error(\`${ctx.featureName} \${id} not found\`);
+      const index = items.findIndex(item => item.${keyField} === ${keyField});
+      if (index === -1) throw new Error(\`${ctx.featureName} \${${keyField}} not found\`);
 
       const rowNumber = index + 2;
       const current = items[index];
@@ -159,7 +168,8 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
       const sheetName = ${ctx.rangeName ? `${ctx.rangeName}.split('!')[0]` : `'${ctx.schema?.range}'.split('!')[0]`};
       const range = \`\${sheetName}!A\${rowNumber}:Z\${rowNumber}\`;
       await SheetsClient.updateValues(spreadsheetId, range, [values]);
-    };`,
+    };`;
+    },
   },
 
   delete: {
@@ -171,11 +181,13 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
       { name: 'id', type: 'string', required: true, description: 'データID' },
     ],
     returnType: 'void',
-    generate: ctx => `
-    const deleteById = async (id: string): Promise<void> => {
+    generate: ctx => {
+      const keyField = ctx.schema?.fields?.[0]?.name ?? 'id';
+      return `
+    const deleteById = async (${keyField}: string): Promise<void> => {
       const items = await getAll();
-      const index = items.findIndex(item => item.id === id);
-      if (index === -1) throw new Error(\`${ctx.featureName} \${id} not found\`);
+      const index = items.findIndex(item => item.${keyField} === ${keyField});
+      if (index === -1) throw new Error(\`${ctx.featureName} \${${keyField}} not found\`);
 
       const rowNumber = index + 2;
       const sheetName = ${ctx.rangeName ? `${ctx.rangeName}.split('!')[0]` : `'${ctx.schema?.range}'.split('!')[0]`};
@@ -183,7 +195,8 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
 
       const emptyValues = new Array(${ctx.schema?.fields.length || 10}).fill('');
       await SheetsClient.updateValues(spreadsheetId, range, [emptyValues]);
-    };`,
+    };`;
+    },
   },
 
   // ================== 範囲操作 ==================
@@ -340,10 +353,13 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
       },
     ],
     returnType: '{{featureName}}[]',
-    generate: ctx => `
+    generate: ctx => {
+      const hasIdField =
+        ctx.schema?.fields?.some(f => f.name === 'id') ?? false;
+      return `
     const batchCreate = async (items: Partial<${ctx.featureName}>[]): Promise<${ctx.featureName}[]> => {
       const created = items.map(data => ({
-        id: generateUuid(),
+        ${hasIdField ? 'id: generateUuid(),' : ''}
         ...data,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -352,7 +368,8 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
       const rows = created.map(item => ${ctx.featureNameCamel}ToRow(item));
       await SheetsClient.appendValues(spreadsheetId, ${ctx.rangeName || `'${ctx.schema?.range}'`}, rows);
       return created;
-    };`,
+    };`;
+    },
   },
 
   batchUpdate: {
@@ -369,14 +386,18 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
       },
     ],
     returnType: 'void',
-    generate: ctx => `
+    generate: ctx => {
+      const keyField = ctx.schema?.fields?.[0]?.name ?? 'id';
+      return `
     const batchUpdate = async (updates: Array<{ id: string; data: Partial<${ctx.featureName}> }>): Promise<void> => {
       const items = await getAll();
       const updateMap = new Map(updates.map(u => [u.id, u.data]));
 
       const valueRanges = items
         .map((item, index) => {
-          const updateData = updateMap.get(item.id);
+          const key = item.${keyField};
+          if (!key) return null;
+          const updateData = updateMap.get(key);
           if (!updateData) return null;
 
           const updated = { ...item, ...updateData, updatedAt: new Date().toISOString() };
@@ -393,7 +414,8 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
       if (valueRanges.length > 0) {
         await SheetsClient.batchUpdateValues(spreadsheetId, valueRanges);
       }
-    };`,
+    };`;
+    },
   },
 };
 
