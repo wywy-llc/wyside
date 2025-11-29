@@ -10,40 +10,40 @@ import { FeatureSchema, FieldSchema } from '../../src/tools/schema-generator';
 const FEATURE_SCHEMA_PRESETS = {
   task: {
     fields: [
-      { name: 'id', type: 'string', column: 'A', required: true },
-      { name: 'title', type: 'string', column: 'B', required: true },
+      { name: 'id', type: 'string', row: 1, column: 'A', required: true },
+      { name: 'title', type: 'string', row: 1, column: 'B', required: true },
     ] as FieldSchema[],
     sheetName: 'Tasks',
     headerRange: 'A1:E1',
   },
   item: {
     fields: [
-      { name: 'id', type: 'string', column: 'A', required: true },
-      { name: 'title', type: 'string', column: 'B', required: true },
+      { name: 'id', type: 'string', row: 1, column: 'A', required: true },
+      { name: 'title', type: 'string', row: 1, column: 'B', required: true },
     ] as FieldSchema[],
     sheetName: 'Items',
     headerRange: 'A1:E1',
   },
   taskWithCompletion: {
     fields: [
-      { name: 'id', type: 'string', column: 'A', required: true },
-      { name: 'title', type: 'string', column: 'B', required: true },
-      { name: 'completed', type: 'boolean', column: 'C' },
+      { name: 'id', type: 'string', row: 1, column: 'A', required: true },
+      { name: 'title', type: 'string', row: 1, column: 'B', required: true },
+      { name: 'completed', type: 'boolean', row: 1, column: 'C' },
     ] as FieldSchema[],
     sheetName: 'Tasks',
     headerRange: 'A1:E1',
   },
   user: {
     fields: [
-      { name: 'name', type: 'string', column: 'A', required: true },
-      { name: 'age', type: 'number', column: 'B' },
+      { name: 'name', type: 'string', row: 1, column: 'A', required: true },
+      { name: 'age', type: 'number', row: 1, column: 'B' },
     ] as FieldSchema[],
     sheetName: 'Users',
     headerRange: 'A1:B1',
   },
   event: {
     fields: [
-      { name: 'createdAt', type: 'date', column: 'A', required: true },
+      { name: 'createdAt', type: 'date', row: 1, column: 'A', required: true },
     ] as FieldSchema[],
     sheetName: 'Events',
     headerRange: 'A1:A1',
@@ -53,6 +53,7 @@ const FEATURE_SCHEMA_PRESETS = {
       {
         name: 'email',
         type: 'string',
+        row: 1,
         column: 'A',
         description: 'User email address',
       },
@@ -65,6 +66,7 @@ const FEATURE_SCHEMA_PRESETS = {
       {
         name: 'active',
         type: 'boolean',
+        row: 1,
         column: 'A',
         sheetsFormat: 'TRUE/FALSE',
       },
@@ -74,17 +76,17 @@ const FEATURE_SCHEMA_PRESETS = {
   },
   product: {
     fields: [
-      { name: 'count', type: 'number', column: 'A' },
-      { name: 'price', type: 'number', column: 'B' },
+      { name: 'count', type: 'number', row: 1, column: 'A' },
+      { name: 'price', type: 'number', row: 1, column: 'B' },
     ] as FieldSchema[],
     sheetName: 'Products',
     headerRange: 'A1:B1',
   },
   dataUnsorted: {
     fields: [
-      { name: 'third', type: 'string', column: 'C' },
-      { name: 'first', type: 'string', column: 'A' },
-      { name: 'second', type: 'string', column: 'B' },
+      { name: 'third', type: 'string', row: 1, column: 'C' },
+      { name: 'first', type: 'string', row: 1, column: 'A' },
+      { name: 'second', type: 'string', row: 1, column: 'B' },
     ] as FieldSchema[],
     sheetName: 'Data',
     headerRange: 'A1:C1',
@@ -94,6 +96,7 @@ const FEATURE_SCHEMA_PRESETS = {
       {
         name: 'enabled',
         type: 'boolean',
+        row: 1,
         column: 'A',
         sheetsFormat: 'TRUE/FALSE',
       },
@@ -103,33 +106,33 @@ const FEATURE_SCHEMA_PRESETS = {
   },
   itemWithQuantity: {
     fields: [
-      { name: 'quantity', type: 'number', column: 'A' },
+      { name: 'quantity', type: 'number', row: 1, column: 'A' },
     ] as FieldSchema[],
     sheetName: 'Items',
     headerRange: 'A1:A1',
   },
   userWithEmailRequired: {
     fields: [
-      { name: 'email', type: 'string', column: 'A', required: true },
-      { name: 'age', type: 'number', column: 'B' },
+      { name: 'email', type: 'string', row: 1, column: 'A', required: true },
+      { name: 'age', type: 'number', row: 1, column: 'B' },
     ] as FieldSchema[],
     sheetName: 'Users',
     headerRange: 'A1:B1',
   },
   note: {
     fields: [
-      { name: 'note', type: 'string', column: 'A' },
-      { name: 'tag', type: 'string', column: 'B' },
+      { name: 'note', type: 'string', row: 1, column: 'A' },
+      { name: 'tag', type: 'string', row: 1, column: 'B' },
     ] as FieldSchema[],
     sheetName: 'Notes',
     headerRange: 'A1:B1',
   },
   itemWithAllTypes: {
     fields: [
-      { name: 'name', type: 'string', column: 'A' },
-      { name: 'count', type: 'number', column: 'B' },
-      { name: 'active', type: 'boolean', column: 'C' },
-      { name: 'createdAt', type: 'date', column: 'D' },
+      { name: 'name', type: 'string', row: 1, column: 'A' },
+      { name: 'count', type: 'number', row: 1, column: 'B' },
+      { name: 'active', type: 'boolean', row: 1, column: 'C' },
+      { name: 'createdAt', type: 'date', row: 1, column: 'D' },
     ] as FieldSchema[],
     sheetName: 'Items',
     headerRange: 'A1:D1',
@@ -140,7 +143,9 @@ const FEATURE_SCHEMA_PRESETS = {
     headerRange: 'A1:A1',
   },
   single: {
-    fields: [{ name: 'value', type: 'string', column: 'A' }] as FieldSchema[],
+    fields: [
+      { name: 'value', type: 'string', row: 1, column: 'A' },
+    ] as FieldSchema[],
     sheetName: 'Single',
     headerRange: 'A1:A1',
   },
@@ -154,8 +159,8 @@ const FEATURE_SCHEMA_PRESETS = {
  */
 const featureSchemaFactory = Factory.Sync.makeFactory<FeatureSchema>({
   fields: [
-    { name: 'id', type: 'string', column: 'A', required: true },
-    { name: 'title', type: 'string', column: 'B', required: true },
+    { name: 'id', type: 'string', row: 1, column: 'A', required: true },
+    { name: 'title', type: 'string', row: 1, column: 'B', required: true },
   ],
   sheetName: Factory.each(i => `Sheet${i}`),
   headerRange: 'A1:E1',

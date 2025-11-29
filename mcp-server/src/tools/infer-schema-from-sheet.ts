@@ -126,11 +126,21 @@ function columnLetterToIndex(column: string): number {
  * Converts header string to camelCase for field names
  * @param value - Original header text
  * @param fallback - Fallback name if conversion fails
+ * @remarks Preserves existing camelCase format if detected
  */
 function toCamelCase(value: string, fallback = 'field'): string {
-  const cleaned = value.trim().replace(/[^a-zA-Z0-9]+/g, ' ');
+  const trimmed = value.trim();
+
+  // If already in camelCase format (starts with lowercase, contains uppercase), preserve it
+  if (/^[a-z][a-zA-Z0-9]*$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  // Otherwise, convert to camelCase
+  const cleaned = trimmed.replace(/[^a-zA-Z0-9]+/g, ' ');
   const parts = cleaned.split(' ').filter(Boolean);
   if (parts.length === 0) return fallback;
+
   return (
     parts[0].toLowerCase() +
     parts
@@ -382,6 +392,94 @@ function generateRangeStrings(
 }
 
 /**
+ * Simple Japanese to English translation dictionary
+ * @remarks Used as fallback when Translation API is unavailable
+ */
+const JA_EN_DICTIONARY: Record<string, string> = {
+  // ID-related
+  ID: 'id',
+  メールID: 'mailId',
+  メールID枝番: 'mailIdBranch',
+  ユーザーID: 'userId',
+  顧客ID: 'customerId',
+
+  // Common fields
+  件名: 'subject',
+  名前: 'name',
+  氏名: 'fullName',
+  受信日: 'receivedDate',
+  確認者: 'confirmer',
+  ステータス: 'status',
+  分類: 'category',
+  メールアドレス: 'email',
+  広告媒体: 'advertisingMedium',
+  初回希望日: 'firstPreferredDate',
+  初回希望院: 'firstPreferredClinic',
+  問い合わせ方法: 'inquiryMethod',
+  タグ: 'tags',
+  確認日: 'confirmationDate',
+  '不備なし／あり': 'defectStatus',
+  不備内容詳細: 'defectDetails',
+  修正完了日: 'correctionCompletedDate',
+  集計用: 'forAggregation',
+
+  // Date fields
+  作成日: 'createdDate',
+  更新日: 'updatedDate',
+  削除日: 'deletedDate',
+  登録日: 'registeredDate',
+
+  // Status/Type fields
+  種類: 'type',
+  状態: 'state',
+  区分: 'division',
+
+  // User/Person fields
+  担当者: 'assignee',
+  作成者: 'creator',
+  更新者: 'updater',
+
+  // Content fields
+  内容: 'content',
+  詳細: 'details',
+  備考: 'remarks',
+  メモ: 'memo',
+  コメント: 'comment',
+  説明: 'description',
+
+  // Numeric fields
+  数: 'count',
+  数値: 'number',
+  金額: 'amount',
+  価格: 'price',
+  合計: 'total',
+};
+
+/**
+ * Translates a single header using dictionary or API
+ * @param text - Header text to translate
+ * @returns Translated text or original if no translation found
+ */
+function translateHeaderText(text: string): string {
+  const trimmed = text.trim();
+
+  // Try exact match first
+  if (JA_EN_DICTIONARY[trimmed]) {
+    return JA_EN_DICTIONARY[trimmed];
+  }
+
+  // Try partial matches for compound words
+  for (const [jaKey, enValue] of Object.entries(JA_EN_DICTIONARY)) {
+    if (trimmed.includes(jaKey)) {
+      // If the header contains a known word, use it
+      return enValue;
+    }
+  }
+
+  return trimmed;
+}
+
+/**
  * Translates headers to English if language is specified
  * @returns Translated headers or original if translation fails/skipped
  */
@@ -393,6 +491,28 @@ async function translateHeaders(
 ): Promise<string[]> {
   if (!lang) return headers;
 
+  // Try dictionary-based translation first (fast and reliable)
+  const dictionaryTranslations = headers.map(h => translateHeaderText(h));
+  const successfulTranslations = dictionaryTranslations.filter(
+    (t, idx) => t !== headers[idx]
+  ).length;
+
+  debug.set('dictionaryTranslations', {
+    successCount: successfulTranslations,
+    totalCount: headers.length,
+    mappings: headers.map((h, idx) => ({
+      original: h,
+      translated: dictionaryTranslations[idx],
+    })),
+  });
+
+  // If dictionary translation was successful for all headers, use it
+  if (successfulTranslations === headers.length) {
+    debug.set('translationMethod', 'dictionary');
+    return dictionaryTranslations;
+  }
+
+  // Otherwise, try Translation API for remaining headers
   try {
     const response = await translate.translations.list({
       q: headers,
@@ -402,19 +522,46 @@ async function translateHeaders(
     });
 
     const translations = response.data.translations;
-    if (!translations) return headers;
+    debug.set('translationResponse', {
+      receivedCount: translations?.length ?? 0,
+      translations: translations?.map(t => t.translatedText) ?? [],
+    });
 
-    return translations.map(t => t.translatedText ?? '').filter(Boolean)
-      .length > 0
-      ? translations.map(t => t.translatedText ?? '')
-      : headers;
+    if (!translations || translations.length === 0) {
+      debug.set(
+        'translationWarning',
+        'No translations returned from API, using dictionary fallback'
+      );
+      debug.set('translationMethod', 'dictionary-fallback');
+      return dictionaryTranslations;
+    }
+
+    // Extract translated texts and validate
+    const apiTranslations = translations.map(t => t.translatedText ?? '');
+    const validTranslations = apiTranslations.filter(Boolean);
+
+    if (validTranslations.length === 0) {
+      debug.set(
+        'translationWarning',
+        'All API translations were empty, using dictionary fallback'
+      );
+      debug.set('translationMethod', 'dictionary-fallback');
+      return dictionaryTranslations;
+    }
+
+    // Merge API and dictionary translations (prefer API if available)
+    debug.set('translationMethod', 'api+dictionary');
+    return apiTranslations.map(
+      (apiText, idx) => apiText || dictionaryTranslations[idx] || headers[idx]
+    );
   } catch (error) {
-    // Log translation failure for observability
+    // Log translation failure and use dictionary fallback
     debug.set(
-      'translationWarning',
+      'translationError',
       error instanceof Error ? error.message : String(error)
     );
-    return headers;
+    debug.set('translationMethod', 'dictionary-fallback-error');
+    return dictionaryTranslations;
   }
 }
 
@@ -425,6 +572,7 @@ function buildFieldSchemas(
   translatedHeaders: string[],
   originalHeaders: string[],
   startColIndex: number,
+  headerRowNumber: number,
   lang?: string
 ): FieldSchema[] {
   const headerLength = translatedHeaders.length;
@@ -435,12 +583,15 @@ function buildFieldSchemas(
   return translatedHeaders.map((translated, idx) => {
     const original = originalHeaders[idx];
     const fallbackName = `field${idx + 1}`;
+
+    // Use translated text if available, otherwise use original
     const base = translated || original || fallbackName;
     const name = toCamelCase(base, fallbackName);
 
     return {
       name,
       type: 'string',
+      row: headerRowNumber,
       column: columnLetters[idx],
       description: lang ? `source(${lang}): ${original}` : original,
     };
@@ -526,6 +677,7 @@ export async function inferSchemaFromSheet(
       translatedHeaders,
       headers,
       startColIndex,
+      parsed.startRow,
       lang
     );
 

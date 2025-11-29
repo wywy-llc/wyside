@@ -106,12 +106,7 @@ function getDataRange(ctx: OperationContext): string {
   const schema = ctx.schema;
   const sheet = schema?.sheetName ?? 'Sheet1';
   const { firstCol, lastCol } = getColumnBounds(schema);
-  const header = schema?.headerRange;
-  let headerRow = 1;
-  if (header) {
-    const match = header.match(/\d+/);
-    if (match) headerRow = Number(match[0]);
-  }
+  const headerRow = schema?.fields[0]?.row ?? 1;
   const dataStart = headerRow + 1;
   return `${sheet}!${firstCol}${dataStart}:${lastCol}`;
 }

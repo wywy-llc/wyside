@@ -232,26 +232,26 @@ describe('Schema Generator', () => {
 
   describe('generateHeaderRange & generateDataRange', () => {
     it('シート名と列からヘッダー/データ範囲を自動算出（headerRange未指定）', () => {
-      // テストデータ: Tasksシート、列A:E（ファクトリー既定）
+      // テストデータ: Tasksシート、列A:B、row=1（ファクトリー既定）
       const schema = FeatureSchemaFactory.task();
 
       // 実行: ヘッダー/データ範囲生成
       const header = generateHeaderRange(schema);
       const data = generateDataRange(schema);
 
-      // 検証: ヘッダーは1行目、データは2行目以降
-      expect(header).toBe('Tasks!A1:E1');
-      expect(data).toBe('Tasks!A2:E');
+      // 検証: fields[].rowから行番号を取得（row=1）
+      expect(header).toBe('Tasks!A1:B1');
+      expect(data).toBe('Tasks!A2:B');
     });
 
-    it('headerRange指定時はそれを優先し、次行をデータ開始にする', () => {
-      // テストデータ: headerRangeが3行目（データは4行目開始）
+    it('fields[].rowが3の場合、ヘッダー3行目・データ4行目開始', () => {
+      // テストデータ: fields[].row=3（データは4行目開始）
       const schema = FeatureSchemaFactory.build({
         sheetName: 'メールボックス',
-        headerRange: 'A3:R3',
+        headerRange: 'A1:R1', // 無視される
         fields: [
-          { name: 'a', type: 'string', column: 'A' },
-          { name: 'b', type: 'string', column: 'R' },
+          { name: 'a', type: 'string', row: 3, column: 'A' },
+          { name: 'b', type: 'string', row: 3, column: 'R' },
         ],
       });
 
@@ -262,22 +262,22 @@ describe('Schema Generator', () => {
       expect(data).toBe('メールボックス!A4:R');
     });
 
-    it('headerRangeにシート名が含まれていても保持する', () => {
-      // テストデータ: headerRangeに別シート名を含むケース
+    it('fields[].row=10の場合、シート名とrow値から範囲を決定', () => {
+      // テストデータ: fields[].row=10を使用（headerRangeは無視される）
       const schema = FeatureSchemaFactory.build({
         sheetName: 'Todos',
-        headerRange: 'CustomSheet!C10:D10',
+        headerRange: 'CustomSheet!C1:D1', // 無視される
         fields: [
-          { name: 'c', type: 'string', column: 'C' },
-          { name: 'd', type: 'string', column: 'D' },
+          { name: 'c', type: 'string', row: 10, column: 'C' },
+          { name: 'd', type: 'string', row: 10, column: 'D' },
         ],
       });
 
       const header = generateHeaderRange(schema);
       const data = generateDataRange(schema);
 
-      expect(header).toBe('CustomSheet!C10:D10');
-      expect(data).toBe('CustomSheet!C11:D');
+      expect(header).toBe('Todos!C10:D10');
+      expect(data).toBe('Todos!C11:D');
     });
   });
 });

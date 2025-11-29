@@ -24,6 +24,8 @@ export interface FieldSchema {
   name: string;
   /** TypeScript型 */
   type: 'string' | 'number' | 'boolean' | 'date';
+  /** ヘッダー行番号（1ベース） */
+  row: number;
   /** Sheets列（A, B, C...） */
   column: string;
   /** 必須フィールド */
@@ -237,29 +239,15 @@ class ColumnRangeCalculator {
    */
   static normalize(schema: FeatureSchema): NormalizedHeaderRange {
     const { firstCol, lastCol } = this.getColumnBounds(schema);
-    const rawHeader = schema.headerRange || `${firstCol}1:${lastCol}1`;
-    const headerWithSheet = rawHeader.includes('!')
-      ? rawHeader
-      : `${schema.sheetName}!${rawHeader}`;
-
-    const match = headerWithSheet.match(
-      /^(?:(?<sheet>[^!]+)!)?(?<startCol>[A-Z]+)(?<startRow>\d+):(?<endCol>[A-Z]+)(?<endRow>\d+)$/
-    );
-
-    const sheet = match?.groups?.sheet || schema.sheetName;
-    const startCol = match?.groups?.startCol || firstCol;
-    const endCol = match?.groups?.endCol || lastCol;
-    const headerRow = match?.groups?.startRow
-      ? Number(match.groups.startRow)
-      : 1;
+    const headerRow = schema.fields[0]?.row ?? 1;
 
     return {
-      sheet,
-      startCol,
-      endCol,
+      sheet: schema.sheetName,
+      startCol: firstCol,
+      endCol: lastCol,
       headerRow,
-      headerRange: `${sheet}!${startCol}${headerRow}:${endCol}${headerRow}`,
-      dataRange: `${sheet}!${startCol}${headerRow + 1}:${endCol}`,
+      headerRange: `${schema.sheetName}!${firstCol}${headerRow}:${lastCol}${headerRow}`,
+      dataRange: `${schema.sheetName}!${firstCol}${headerRow + 1}:${lastCol}`,
     };
   }
 }
@@ -289,6 +277,23 @@ export function generateDataRange(schema: FeatureSchema): string {
  */
 export function getFieldCount(schema: FeatureSchema): number {
   return schema.fields.length;
+}
+
+/**
+ * スキーマの整合性を検証
+ *
+ * @param schema - 検証対象のスキーマ
+ * @throws {Error} 全フィールドが同じ行番号を持たない場合
+ */
+export function validateSchema(schema: FeatureSchema): void {
+  if (schema.fields.length === 0) return;
+
+  const firstRow = schema.fields[0].row;
+  const hasInconsistentRows = schema.fields.some(f => f.row !== firstRow);
+
+  if (hasInconsistentRows) {
+    throw new Error('All fields must have the same row number');
+  }
 }
 
 /**

@@ -60,6 +60,12 @@ const fieldSchemaZod = z.object({
     .enum(['string', 'number', 'boolean', 'date'])
     .describe('TypeScript type of the field'),
 
+  row: z
+    .number()
+    .int()
+    .positive()
+    .describe('Header row number (1-based, e.g., 1 for row 1)'),
+
   column: z
     .string()
     .regex(/^[A-Z]+$/, 'Must be uppercase letters (A, B, C, ..., AA, AB, ...)')
