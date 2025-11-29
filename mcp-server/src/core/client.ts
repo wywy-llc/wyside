@@ -38,6 +38,51 @@ export async function getSheetsClient(): Promise<SheetsClientInstance> {
 export const SheetsClient = (() => {
   let clientInstance: SheetsClientInstance | null = null;
 
+  const columnToIndex = (column: string): number => {
+    let index = 0;
+    for (let i = 0; i < column.length; i++) {
+      index = index * 26 + (column.charCodeAt(i) - 64);
+    }
+    return index - 1;
+  };
+
+  const parseA1Range = (
+    range: string
+  ): {
+    sheet?: string;
+    startRow?: number;
+    endRow?: number;
+    startCol?: number;
+    endCol?: number;
+  } => {
+    const match = range.match(
+      /^(?:(?<sheet>[^!]+)!){0,1}(?<startCol>[A-Z]+)?(?<startRow>\\d+)?(?::(?<endCol>[A-Z]+)?(?<endRow>\\d+)?)?$/
+    );
+    if (!match || !match.groups) {
+      return {};
+    }
+
+    const sheet = match.groups.sheet;
+    const startCol = match.groups.startCol
+      ? columnToIndex(match.groups.startCol)
+      : undefined;
+    const endCol = match.groups.endCol
+      ? columnToIndex(match.groups.endCol) + 1
+      : startCol !== undefined
+        ? startCol + 1
+        : undefined;
+    const startRow = match.groups.startRow
+      ? Number(match.groups.startRow) - 1
+      : undefined;
+    const endRow = match.groups.endRow
+      ? Number(match.groups.endRow)
+      : startRow !== undefined
+        ? startRow + 1
+        : undefined;
+
+    return { sheet, startCol, endCol, startRow, endRow };
+  };
+
   /**
    * クライアントインスタンスを取得または作成
    */
@@ -88,6 +133,25 @@ export const SheetsClient = (() => {
       const response = await client.spreadsheets.values.batchGet({
         spreadsheetId,
         ranges,
+      });
+      return response.data;
+    },
+
+    /**
+     * 値をクリア
+     *
+     * @param spreadsheetId - スプレッドシートID
+     * @param range - クリアする範囲（A1記法）
+     */
+    async clearValues(
+      spreadsheetId: string,
+      range: string
+    ): Promise<sheets_v4.Schema$ClearValuesResponse> {
+      const client = await getClient();
+      const response = await client.spreadsheets.values.clear({
+        spreadsheetId,
+        range,
+        requestBody: {},
       });
       return response.data;
     },
@@ -158,6 +222,23 @@ export const SheetsClient = (() => {
         },
       });
       return response.data;
+    },
+
+    /**
+     * A1記法をGridRangeへ変換
+     *
+     * @param range - A1記法の範囲
+     */
+    a1ToGridRange(range: string): sheets_v4.Schema$GridRange {
+      const { startCol, endCol, startRow, endRow } = parseA1Range(range);
+
+      return {
+        sheetId: undefined,
+        startColumnIndex: startCol,
+        endColumnIndex: endCol,
+        startRowIndex: startRow,
+        endRowIndex: endRow,
+      };
     },
   } as const;
 })();

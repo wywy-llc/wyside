@@ -34,11 +34,11 @@ export interface Schedule {
 export interface Task {
   id: string;
   title: string;
-  priority: number;
-  completed: boolean;
+  priority?: number;
+  completed?: boolean;
   dueDate?: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 /**
@@ -54,4 +54,60 @@ export interface SheetsApiRequest {
 export interface SheetsApiResponse {
   spreadsheetId: string;
   replies: any[];
+}
+
+/**
+ * Item機能のデータ型
+ */
+export interface Item {
+  id: string;
+  name: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/**
+ * Custom機能のデータ型
+ */
+export interface Custom {
+  id: string;
+  title: string;
+}
+
+/**
+ * Data機能のデータ型
+ */
+export interface Data {
+  value: string;
+}
+
+/**
+ * Simple機能のデータ型
+ */
+export interface Simple {
+  id: string;
+}
+
+/**
+ * Test機能のデータ型
+ */
+export interface Test {
+  id: string;
+  title: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/**
+ * MedicalSheet機能のデータ型
+ */
+export interface MedicalSheet {
+  id?: string;
+  mailId: string;
+  mailIdBranch: string;
+  subject: string;
+  receivedDate: string;
+  reviewer: string;
+  status: string;
+  updatedAt?: string;
 }

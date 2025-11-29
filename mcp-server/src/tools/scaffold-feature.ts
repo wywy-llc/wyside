@@ -196,6 +196,64 @@ async function writeGeneratedFiles(
   );
 }
 
+async function upsertCoreTypes(
+  pascalName: string,
+  typeDefinition: string | undefined,
+  messages: string[]
+): Promise<void> {
+  if (!typeDefinition) return;
+
+  const typesPath = path.join(process.cwd(), 'src/core/types.ts');
+  let content = '';
+  try {
+    content = await fs.readFile(typesPath, 'utf-8');
+  } catch {
+    content = '/** Auto-generated types */\n';
+  }
+
+  const pattern = new RegExp(
+    `export interface ${pascalName}[\\s\\S]*?\\n}`,
+    'm'
+  );
+  if (pattern.test(content)) {
+    content = content.replace(pattern, typeDefinition);
+  } else {
+    if (!content.endsWith('\n')) content += '\n';
+    content += `${typeDefinition}\n`;
+  }
+
+  await fs.writeFile(typesPath, content);
+  messages.push(`Updated core types: ${pascalName}`);
+}
+
+async function upsertCoreConstants(
+  rangeName: string | undefined,
+  range: string | undefined,
+  messages: string[]
+): Promise<void> {
+  if (!rangeName || !range) return;
+
+  const constantsPath = path.join(process.cwd(), 'src/core/constants.ts');
+  let content = '';
+  try {
+    content = await fs.readFile(constantsPath, 'utf-8');
+  } catch {
+    content = '/** Auto-generated range constants */\n';
+  }
+
+  const declaration = `export const ${rangeName} = '${range}';`;
+  const pattern = new RegExp(`export const ${rangeName} = ['\`"].*['\`"];`);
+  if (pattern.test(content)) {
+    content = content.replace(pattern, declaration);
+  } else {
+    if (!content.endsWith('\n')) content += '\n';
+    content += `${declaration}\n`;
+  }
+
+  await fs.writeFile(constantsPath, content);
+  messages.push(`Updated core constants: ${rangeName}`);
+}
+
 /**
  * 操作リストを解決
  *
@@ -337,6 +395,14 @@ export async function scaffoldFeature(
     // データ構築
     const schemaData = buildSchemaData(names, schema, operationIds);
     const templateData = buildTemplateData(names, operationIds, schemaData);
+
+    // コア定義を更新
+    await upsertCoreTypes(names.pascal, templateData.typeDefinition, messages);
+    await upsertCoreConstants(
+      templateData.rangeName,
+      templateData.range,
+      messages
+    );
 
     // ファイル生成
     await writeGeneratedFiles(
