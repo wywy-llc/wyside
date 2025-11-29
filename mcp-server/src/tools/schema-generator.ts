@@ -2,6 +2,18 @@
  * スキーマベースのコード生成ヘルパー
  *
  * @remarks Google Sheets APIのスキーマ定義からTypeScriptコードを自動生成
+ * @example
+ * ```ts
+ * const schema: FeatureSchema = {
+ *   fields: [
+ *     { name: 'id', type: 'string', column: 'A' },
+ *     { name: 'completed', type: 'boolean', column: 'C', sheetsFormat: 'TRUE/FALSE' }
+ *   ],
+ *   sheetName: 'Tasks',
+ *   headerRange: 'A1:E1'
+ * };
+ * const typeDef = generateTypeDefinition('Task', schema);
+ * ```
  */
 
 /**
@@ -35,6 +47,16 @@ export interface FeatureSchema {
 }
 
 /**
+ * デフォルト値生成のルール設定
+ */
+export interface DefaultValueRule {
+  /** フィールド名のパターン */
+  fieldNamePattern: string | RegExp;
+  /** 生成する値（文字列または生成関数） */
+  value: string | ((field: FieldSchema) => string);
+}
+
+/**
  * 列文字をインデックスに変換
  *
  * @param column - 列文字（A, B, C...）
@@ -46,6 +68,70 @@ function columnToIndex(column: string): number {
     index = index * 26 + (column.charCodeAt(i) - 64);
   }
   return index - 1;
+}
+
+/**
+ * camelCaseをPascalCaseに変換
+ *
+ * @param str - camelCase文字列
+ * @returns PascalCase文字列
+ */
+function toPascalCase(str: string): string {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+/**
+ * フィールドを列インデックスでソート
+ *
+ * @param fields - フィールド配列
+ * @returns ソート済みフィールド配列
+ */
+function sortFieldsByColumn(fields: FieldSchema[]): FieldSchema[] {
+  return [...fields].sort(
+    (a, b) => columnToIndex(a.column) - columnToIndex(b.column)
+  );
+}
+
+/**
+ * 型変換ロジックを集約するクラス
+ */
+class ValueConverter {
+  /**
+   * Sheets値→TypeScript値への変換コードを生成
+   *
+   * @param field - フィールドスキーマ
+   * @param arrayAccessor - 配列アクセス式（例: `row[0]`）
+   * @returns 変換後の式
+   */
+  static sheetsToTypeScript(field: FieldSchema, arrayAccessor: string): string {
+    switch (field.type) {
+      case 'boolean':
+        return field.sheetsFormat === 'TRUE/FALSE'
+          ? `${arrayAccessor} === 'TRUE'`
+          : `Boolean(${arrayAccessor})`;
+      case 'number':
+        return `Number(${arrayAccessor})`;
+      default:
+        return arrayAccessor;
+    }
+  }
+
+  /**
+   * TypeScript値→Sheets値への変換コードを生成
+   *
+   * @param field - フィールドスキーマ
+   * @param objectAccessor - オブジェクトアクセス式（例: `task.completed`）
+   * @returns 変換後の式
+   */
+  static typeScriptToSheets(
+    field: FieldSchema,
+    objectAccessor: string
+  ): string {
+    if (field.type === 'boolean' && field.sheetsFormat === 'TRUE/FALSE') {
+      return `${objectAccessor} ? 'TRUE' : 'FALSE'`;
+    }
+    return objectAccessor;
+  }
 }
 
 /**
@@ -84,25 +170,11 @@ export function generateRowToObject(
   featureName: string,
   schema: FeatureSchema
 ): string {
-  const sortedFields = [...schema.fields].sort(
-    (a, b) => columnToIndex(a.column) - columnToIndex(b.column)
-  );
+  const sortedFields = sortFieldsByColumn(schema.fields);
 
   const mappings = sortedFields.map(field => {
     const index = columnToIndex(field.column);
-    let value = `row[${index}]`;
-
-    // 型変換
-    if (field.type === 'boolean') {
-      if (field.sheetsFormat === 'TRUE/FALSE') {
-        value = `row[${index}] === 'TRUE'`;
-      } else {
-        value = `Boolean(row[${index}])`;
-      }
-    } else if (field.type === 'number') {
-      value = `Number(row[${index}])`;
-    }
-
+    const value = ValueConverter.sheetsToTypeScript(field, `row[${index}]`);
     return `    ${field.name}: ${value},`;
   });
 
@@ -122,40 +194,74 @@ export function generateObjectToRow(
   featureName: string,
   schema: FeatureSchema
 ): string {
-  const sortedFields = [...schema.fields].sort(
-    (a, b) => columnToIndex(a.column) - columnToIndex(b.column)
-  );
+  const sortedFields = sortFieldsByColumn(schema.fields);
+  const pascalName = toPascalCase(featureName);
 
   const mappings = sortedFields.map(field => {
-    let value = `${featureName}.${field.name}`;
-
-    // 型変換
-    if (field.type === 'boolean' && field.sheetsFormat === 'TRUE/FALSE') {
-      value = `${value} ? 'TRUE' : 'FALSE'`;
-    }
-
+    const accessor = `${featureName}.${field.name}`;
+    const value = ValueConverter.typeScriptToSheets(field, accessor);
     return `    ${value},`;
   });
 
-  return `  const ${featureName}ToRow = (${featureName}: ${featureName.charAt(0).toUpperCase() + featureName.slice(1)}): any[] => [
+  return `  const ${featureName}ToRow = (${featureName}: ${pascalName}): any[] => [
 ${mappings.join('\n')}
   ];`;
 }
 
 /**
- * CRUD操作の列範囲を生成
- *
- * @param schema - 機能スキーマ
- * @returns 列範囲（例: "A:E"）
+ * 列範囲計算を責務とするクラス
  */
-function getColumnBounds(schema: FeatureSchema): {
-  firstCol: string;
-  lastCol: string;
-} {
-  const columns = schema.fields.map(f => f.column).sort();
-  const firstCol = columns[0];
-  const lastCol = columns[columns.length - 1];
-  return { firstCol, lastCol };
+class ColumnRangeCalculator {
+  /**
+   * スキーマから列境界を取得
+   *
+   * @param schema - 機能スキーマ
+   * @returns 最初と最後の列文字
+   */
+  static getColumnBounds(schema: FeatureSchema): {
+    firstCol: string;
+    lastCol: string;
+  } {
+    const columns = schema.fields.map(f => f.column).sort();
+    return {
+      firstCol: columns[0],
+      lastCol: columns[columns.length - 1],
+    };
+  }
+
+  /**
+   * ヘッダー範囲を正規化
+   *
+   * @param schema - 機能スキーマ
+   * @returns 正規化された範囲情報
+   */
+  static normalize(schema: FeatureSchema): NormalizedHeaderRange {
+    const { firstCol, lastCol } = this.getColumnBounds(schema);
+    const rawHeader = schema.headerRange || `${firstCol}1:${lastCol}1`;
+    const headerWithSheet = rawHeader.includes('!')
+      ? rawHeader
+      : `${schema.sheetName}!${rawHeader}`;
+
+    const match = headerWithSheet.match(
+      /^(?:(?<sheet>[^!]+)!)?(?<startCol>[A-Z]+)(?<startRow>\d+):(?<endCol>[A-Z]+)(?<endRow>\d+)$/
+    );
+
+    const sheet = match?.groups?.sheet || schema.sheetName;
+    const startCol = match?.groups?.startCol || firstCol;
+    const endCol = match?.groups?.endCol || lastCol;
+    const headerRow = match?.groups?.startRow
+      ? Number(match.groups.startRow)
+      : 1;
+
+    return {
+      sheet,
+      startCol,
+      endCol,
+      headerRow,
+      headerRange: `${sheet}!${startCol}${headerRow}:${endCol}${headerRow}`,
+      dataRange: `${sheet}!${startCol}${headerRow + 1}:${endCol}`,
+    };
+  }
 }
 
 type NormalizedHeaderRange = {
@@ -167,38 +273,12 @@ type NormalizedHeaderRange = {
   dataRange: string;
 };
 
-function normalizeHeaderRange(schema: FeatureSchema): NormalizedHeaderRange {
-  const { firstCol, lastCol } = getColumnBounds(schema);
-  const rawHeader = schema.headerRange || `${firstCol}1:${lastCol}1`;
-  const headerWithSheet = rawHeader.includes('!')
-    ? rawHeader
-    : `${schema.sheetName}!${rawHeader}`;
-
-  const match = headerWithSheet.match(
-    /^(?:(?<sheet>[^!]+)!)?(?<startCol>[A-Z]+)(?<startRow>\d+):(?<endCol>[A-Z]+)(?<endRow>\d+)$/
-  );
-
-  const sheet = match?.groups?.sheet || schema.sheetName;
-  const startCol = match?.groups?.startCol || firstCol;
-  const endCol = match?.groups?.endCol || lastCol;
-  const headerRow = match?.groups?.startRow ? Number(match.groups.startRow) : 1;
-
-  return {
-    sheet,
-    startCol,
-    endCol,
-    headerRow,
-    headerRange: `${sheet}!${startCol}${headerRow}:${endCol}${headerRow}`,
-    dataRange: `${sheet}!${startCol}${headerRow + 1}:${endCol}`,
-  };
-}
-
 export function generateHeaderRange(schema: FeatureSchema): string {
-  return normalizeHeaderRange(schema).headerRange;
+  return ColumnRangeCalculator.normalize(schema).headerRange;
 }
 
 export function generateDataRange(schema: FeatureSchema): string {
-  return normalizeHeaderRange(schema).dataRange;
+  return ColumnRangeCalculator.normalize(schema).dataRange;
 }
 
 /**
@@ -237,20 +317,46 @@ export function generateValidation(
 }
 
 /**
+ * デフォルトルール: 一般的なフィールド名パターンに対応
+ */
+const DEFAULT_RULES: DefaultValueRule[] = [
+  { fieldNamePattern: 'id', value: 'generateUuid()' },
+  { fieldNamePattern: /^createdAt$/i, value: 'new Date().toISOString()' },
+  { fieldNamePattern: /^updatedAt$/i, value: 'new Date().toISOString()' },
+];
+
+/**
  * デフォルト値を持つフィールドを生成
  *
  * @param schema - 機能スキーマ
+ * @param customRules - カスタムルール（省略時はデフォルトルールのみ使用）
  * @returns デフォルト値のオブジェクト
  */
-export function generateDefaults(schema: FeatureSchema): Record<string, any> {
+export function generateDefaults(
+  schema: FeatureSchema,
+  customRules: DefaultValueRule[] = []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Record<string, any> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const defaults: Record<string, any> = {};
+  const allRules = [...DEFAULT_RULES, ...customRules];
 
   for (const field of schema.fields) {
-    if (field.name === 'id') {
-      defaults[field.name] = 'generateUuid()';
-    } else if (field.name === 'createdAt' || field.name === 'updatedAt') {
-      defaults[field.name] = 'new Date().toISOString()';
+    // ルールマッチング
+    const matchedRule = allRules.find(rule => {
+      if (typeof rule.fieldNamePattern === 'string') {
+        return field.name === rule.fieldNamePattern;
+      }
+      return rule.fieldNamePattern.test(field.name);
+    });
+
+    if (matchedRule) {
+      defaults[field.name] =
+        typeof matchedRule.value === 'function'
+          ? matchedRule.value(field)
+          : matchedRule.value;
     } else if (field.type === 'boolean') {
+      // 型ベースのデフォルト
       defaults[field.name] = false;
     }
   }
