@@ -396,8 +396,8 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
       const valueRanges = items
         .map((item, index) => {
           const key = item.${keyField};
-          if (!key) return null;
-          const updateData = updateMap.get(key);
+          if (key === undefined || key === null || key === '') return null;
+          const updateData = updateMap.get(key as string);
           if (!updateData) return null;
 
           const updated = { ...item, ...updateData, updatedAt: new Date().toISOString() };
