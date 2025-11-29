@@ -80,28 +80,39 @@ export async function inferSchemaFromSheet(
     let headerRowIndex = -1;
     let startColIndex = -1;
 
-    // ヘッダー行の検索
-    for (let rowIdx = 0; rowIdx < values.length; rowIdx++) {
+    // ヘッダーの正規化（一度だけ実行）
+    const normalizedHeaders = headers.map(h => h.trim());
+    const headerLength = normalizedHeaders.length;
+
+    // 最適化: ヘッダー行の検索（早期終了 + slice削減）
+    outerLoop: for (let rowIdx = 0; rowIdx < values.length; rowIdx++) {
       const row = values[rowIdx] || [];
-      for (let colIdx = 0; colIdx < row.length; colIdx++) {
-        const slice = row
-          .slice(colIdx, colIdx + headers.length)
-          .map(v => String(v || '').trim());
-        if (headers.every((h, i) => slice[i] === h.trim())) {
+      const maxStartCol = Math.max(0, row.length - headerLength + 1);
+
+      for (let colIdx = 0; colIdx < maxStartCol; colIdx++) {
+        // 早期終了条件: すべてのヘッダーが一致するかチェック
+        let allMatch = true;
+        for (let i = 0; i < headerLength; i++) {
+          if (String(row[colIdx + i] || '').trim() !== normalizedHeaders[i]) {
+            allMatch = false;
+            break;
+          }
+        }
+
+        if (allMatch) {
           headerRowIndex = rowIdx;
           startColIndex = colIdx;
-          break;
+          break outerLoop;
         }
       }
-      if (headerRowIndex !== -1) break;
     }
 
     if (headerRowIndex === -1 || startColIndex === -1) {
       throw new Error('header row not found in the provided sheet/headers');
     }
 
-    // 範囲文字列の生成
-    const endColIndex = startColIndex + headers.length - 1;
+    // 範囲文字列の生成（列文字列を事前計算）
+    const endColIndex = startColIndex + headerLength - 1;
     const startColLetter = columnIndexToLetter(startColIndex);
     const endColLetter = columnIndexToLetter(endColIndex);
 
@@ -128,17 +139,22 @@ export async function inferSchemaFromSheet(
       }
     }
 
-    // FieldSchema 配列の生成
+    // 最適化: 列文字列を事前計算（メモ化）
+    const columnLetters = Array.from({ length: headerLength }, (_, i) =>
+      columnIndexToLetter(startColIndex + i)
+    );
+
+    // FieldSchema 配列の生成（型変換の削減）
     const fields: FieldSchema[] = translatedHeaders.map((translated, idx) => {
       const original = headers[idx];
       const fallbackName = `field${idx + 1}`;
       const base = translated || original || fallbackName;
-      const name = toCamelCase(String(base), fallbackName);
+      const name = toCamelCase(base, fallbackName);
       return {
         name,
         type: 'string',
-        column: columnIndexToLetter(startColIndex + idx),
-        description: lang ? `source(${lang}): ${original}` : String(original),
+        column: columnLetters[idx],
+        description: lang ? `source(${lang}): ${original}` : original,
       };
     });
 
