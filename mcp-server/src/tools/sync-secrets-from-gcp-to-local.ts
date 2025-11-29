@@ -69,15 +69,20 @@ async function getGcpProject(projectId?: string): Promise<string> {
  */
 async function enableGoogleApis(
   projectId: string,
-  messages: string[]
+  messages: string[],
+  enableTranslation: boolean
 ): Promise<void> {
-  messages.push('Enabling Google APIs (Sheets, Gmail, Drive, Translation)...');
+  messages.push(
+    `Enabling Google APIs (Sheets, Gmail, Drive${enableTranslation ? ', Translation' : ''})...`
+  );
   const apis = [
     'sheets.googleapis.com',
     'gmail.googleapis.com',
     'drive.googleapis.com',
-    'translate.googleapis.com',
   ];
+  if (enableTranslation) {
+    apis.push('translate.googleapis.com');
+  }
   for (const api of apis) {
     await execa('gcloud', ['services', 'enable', api, '--project', projectId]);
   }
@@ -240,6 +245,7 @@ export interface SyncSecretsFromGcpToLocalArgs {
   spreadsheetIdDev: string;
   spreadsheetIdProd?: string;
   force?: boolean;
+  enableTranslation?: boolean;
 }
 
 /**
@@ -262,7 +268,8 @@ export async function syncSecretsFromGcpToLocal(
     const projectId = await getGcpProject(args.projectId);
     messages.push(`Using GCP Project: ${chalk.bold(projectId)}`);
 
-    await enableGoogleApis(projectId, messages);
+    const enableTranslation = args.enableTranslation ?? true;
+    await enableGoogleApis(projectId, messages, enableTranslation);
     const saEmail = await ensureServiceAccount(projectId, messages);
     await createServiceAccountKey(saEmail, projectId, messages, args.force);
     await updateEnvFile(

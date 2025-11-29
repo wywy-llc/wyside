@@ -7,12 +7,11 @@ import {
   type FeatureSchema,
 } from '../../src/tools/schema-generator.js';
 import { inferSchemaFromSheet } from '../../src/tools/infer-schema-from-sheet.js';
-import {
-  SheetsValuesGetResponseFactory,
-  TranslateListResponseFactory,
-} from '../factories/googleapis.factory.js';
+import { TranslateListResponseFactory } from '../factories/googleapis.factory.js';
 
-const mockGet = vi.fn();
+const mockGetMeta = vi.fn();
+const mockBatchGet = vi.fn();
+const mockValuesGet = vi.fn();
 const mockTranslateList = vi.fn();
 
 vi.mock('google-auth-library', () => {
@@ -25,8 +24,10 @@ vi.mock('google-auth-library', () => {
 vi.mock('googleapis', () => {
   const sheetsMock = vi.fn(() => ({
     spreadsheets: {
+      get: mockGetMeta,
       values: {
-        get: mockGet,
+        batchGetByDataFilter: mockBatchGet,
+        get: mockValuesGet,
       },
     },
   }));
@@ -46,18 +47,43 @@ vi.mock('googleapis', () => {
 describe('infer-schema-from-sheet + schema-generator integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    SheetsValuesGetResponseFactory.resetSequenceNumber();
     TranslateListResponseFactory.resetSequenceNumber();
   });
 
   it('inferSchemaFromSheetで推論したスキーマをschema-generatorに渡して正常に型定義とコンバータを生成できる', async () => {
     // テストデータ: 日本語ヘッダー付きシートデータ（ID, 名前, 数値）
-    mockGet.mockResolvedValueOnce(
-      SheetsValuesGetResponseFactory.withValues([
-        ['ID', '名前', '数値'],
-        ['1', 'foo', '123'],
-      ])
-    );
+    mockGetMeta.mockResolvedValueOnce({
+      data: {
+        sheets: [
+          {
+            properties: { title: 'Sheet1', sheetId: 0 },
+          },
+        ],
+      },
+    });
+    mockBatchGet.mockResolvedValueOnce({
+      data: {
+        valueRanges: [
+          {
+            valueRange: {
+              range: 'Sheet1!A1:C2',
+              values: [
+                ['ID', '名前', '数値'],
+                ['1', 'foo', '123'],
+              ],
+            },
+          },
+        ],
+      },
+    });
+    mockValuesGet.mockResolvedValueOnce({
+      data: {
+        values: [
+          ['ID', '名前', '数値'],
+          ['1', 'foo', '123'],
+        ],
+      },
+    });
 
     // モック: Google翻訳APIで日本語→英語変換（id, name, number）
     mockTranslateList.mockResolvedValueOnce(
@@ -68,6 +94,7 @@ describe('infer-schema-from-sheet + schema-generator integration', () => {
       spreadsheetId: 'dummy',
       sheetName: 'Sheet1',
       headers: ['ID', '名前', '数値'],
+      headerStartCell: 'A1',
       lang: 'ja',
     });
 

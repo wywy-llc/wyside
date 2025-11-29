@@ -47,6 +47,7 @@ const syncSecretsArgsFactory =
   Factory.Sync.makeFactory<SyncSecretsFromGcpToLocalArgs>({
     projectId: Factory.each(i => `test-project-${i}`),
     spreadsheetIdDev: '1jvwUjvP8t9o8u6O42a-hvTe1HBXM7iXRqbsMhp0JH2g',
+    enableTranslation: true,
   });
 
 /**

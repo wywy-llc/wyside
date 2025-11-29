@@ -303,6 +303,22 @@ describe('sync-secrets-from-gcp-to-local', () => {
         expect(result.content[0].text).toContain('Error:');
         expect(result.content[0].text).toContain('gcloud CLI');
       });
+
+      it('enableTranslation=false の場合は翻訳APIを有効化しない', async () => {
+        const args = SyncSecretsArgsFactory.basic({ enableTranslation: false });
+
+        mockFsAccess.mockRejectedValue(new Error('File not found'));
+
+        await syncSecretsFromGcpToLocal(args);
+
+        const enableCalls = mockExeca.mock.calls.filter(
+          call =>
+            call[0] === 'gcloud' &&
+            call[1]?.[0] === 'services' &&
+            call[1]?.includes('translate.googleapis.com')
+        );
+        expect(enableCalls).toHaveLength(0);
+      });
     });
   });
 });
