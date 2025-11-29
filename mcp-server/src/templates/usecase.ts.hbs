@@ -14,55 +14,50 @@ import { Universal{{featureName}}Repo } from './Universal{{featureName}}Repo.js'
  *
 {{#if hasSchema}}
  * const items = await {{featureName}}UseCase.list();
- * await {{featureName}}UseCase.create({ title: 'Example' });
 {{else}}
  * // TODO: Add example usage
 {{/if}}
  * ```
  */
 export const {{featureName}}UseCase = (() => {
-{{#if hasSchema}}
   // TODO: Update SpreadsheetType to match your feature
   const spreadsheetId = getSpreadsheetId(SpreadsheetType.TODOS);
 
   // Cache repository instance to avoid redundant creation
   const repo = Universal{{featureName}}Repo.create(spreadsheetId);
 
+{{#if hasSchema}}
   /**
    * ✅ GASとNode.jsで完全に同一の実装
-   */
-  const list = async (): Promise<{{featureName}}[]> => {
-    return repo.getAll();
-  };
-
-  const create = async (data: Partial<{{featureName}}>): Promise<{{featureName}}> => {
+   *
+   * Available repository operations: {{{exportsList}}}
+   *
+   * Example implementation (uncomment and modify as needed):
+   * const list = async (): Promise<{{featureName}}[]> => {
+   *   return repo.getAll();
+   * };
+   *
+   * const create = async (data: Partial<{{featureName}}>): Promise<{{featureName}}> => {
 {{#if validation}}
-{{validation}}
+   *   {{{validation}}}
 {{/if}}
-    return repo.create(data);
-  };
-
-  const update = async (id: string, updates: Partial<{{featureName}}>): Promise<void> => {
-    await repo.update(id, updates);
-  };
-
-  const deleteById = async (id: string): Promise<void> => {
-    await repo.delete(id);
-  };
+   *   return repo.create(data);
+   * };
+   *
+   * const update = async (id: string, updates: Partial<{{featureName}}>): Promise<void> => {
+   *   await repo.update(id, updates);
+   * };
+   *
+   * const deleteById = async (id: string): Promise<void> => {
+   *   await repo.delete(id);
+   * };
+   */
 
   return {
-    list,
-    create,
-    update,
-    delete: deleteById,
+    // TODO: Export your use case methods here
+    // Example: list, create, update, delete: deleteById
   } as const;
 {{else}}
-  // TODO: Update SpreadsheetType to match your feature
-  // const spreadsheetId = getSpreadsheetId(SpreadsheetType.YOUR_TYPE);
-
-  // Cache repository instance to avoid redundant creation
-  // const repo = Universal{{featureName}}Repo.create(spreadsheetId);
-
   /**
    * ✅ GASとNode.jsで完全に同一の実装
    */

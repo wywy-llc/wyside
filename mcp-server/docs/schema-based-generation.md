@@ -255,7 +255,7 @@ const result = await scaffoldFeature({
       { name: 'createdAt', type: 'date', column: 'D' },
       { name: 'updatedAt', type: 'date', column: 'E' },
     ],
-    range: 'Tasks!A2:E',
+    range: 'Tasks!A2:E', // Or simply 'A2:E' without sheet name
     rangeName: 'TASK_RANGE',
   },
 });

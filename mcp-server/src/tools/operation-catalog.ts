@@ -388,7 +388,7 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
             values: [${ctx.featureNameCamel}ToRow(updated)],
           };
         })
-        .filter(Boolean);
+        .filter((vr): vr is { range: string; values: any[][] } => vr !== null);
 
       if (valueRanges.length > 0) {
         await SheetsClient.batchUpdateValues(spreadsheetId, valueRanges);

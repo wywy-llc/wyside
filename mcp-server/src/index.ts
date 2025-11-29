@@ -86,8 +86,8 @@ const featureSchemaZod = z.object({
   range: z
     .string()
     .regex(
-      /^[A-Za-z0-9_]+![A-Z]+\d+:[A-Z]+$/,
-      'Must be in A1 notation format (e.g., "Tasks!A2:E")'
+      /^(?:[A-Za-z0-9_]+!)?[A-Z]+\d*:[A-Z]+\d*$/,
+      'Must be in A1 notation format (e.g., "Tasks!A2:E" or "A3:R")'
     )
     .describe('Google Sheets range in A1 notation'),
 

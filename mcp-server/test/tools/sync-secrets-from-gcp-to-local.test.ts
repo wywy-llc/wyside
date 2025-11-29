@@ -35,9 +35,8 @@ vi.mock('chalk', () => ({
 }));
 
 // テスト対象のモジュールをインポート（モックの後）
-const { syncSecretsFromGcpToLocal } = await import(
-  '../../src/tools/sync-secrets-from-gcp-to-local.js'
-);
+const { syncSecretsFromGcpToLocal } =
+  await import('../../src/tools/sync-secrets-from-gcp-to-local.js');
 
 describe('sync-secrets-from-gcp-to-local', () => {
   beforeEach(() => {
