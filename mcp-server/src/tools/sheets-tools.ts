@@ -26,9 +26,9 @@ interface ToolResult {
 interface GridRange {
   sheetId: number;
   startRowIndex: number;
-  endRowIndex: number;
+  endRowIndex?: number;
   startColumnIndex: number;
-  endColumnIndex: number;
+  endColumnIndex?: number;
 }
 
 /**
@@ -121,7 +121,6 @@ function parseA1Notation(a1Notation: string, sheetId: number): GridRange {
     return {
       sheetId,
       startRowIndex: 0,
-      endRowIndex: undefined as any, // 行全体を表すためにundefined
       startColumnIndex: startCol,
       endColumnIndex: endCol + 1,
     };
@@ -136,7 +135,6 @@ function parseA1Notation(a1Notation: string, sheetId: number): GridRange {
       startRowIndex: startRow,
       endRowIndex: endRow + 1,
       startColumnIndex: 0,
-      endColumnIndex: undefined as any, // 列全体を表すためにundefined
     };
   }
 
@@ -273,6 +271,66 @@ async function updateConstantsFile(
 }
 
 /**
+ * A1記法の範囲文字列を正規化
+ *
+ * @param rawRange - 生の範囲文字列（シェルエスケープや余分なクォートを含む可能性がある）
+ * @returns 正規化された範囲文字列
+ * @remarks シェルエスケープ(\!)の削除、余分なクォートの除去を実施
+ */
+function normalizeHeaderRange(rawRange: string): string {
+  let normalized = rawRange;
+
+  // シェルエスケープされた文字を正規化
+  normalized = normalized.replace(/\\!/g, '!'); // \! → !
+
+  // 範囲全体がシングルクォートで囲まれている場合（'Todos!E:E'のような誤った形式）
+  // ただし、Google Sheets形式のシート名エスケープ（'Sheet Name'!A1）は除外
+  if (
+    normalized.startsWith("'") &&
+    normalized.endsWith("'") &&
+    !normalized.includes("'!")
+  ) {
+    // 範囲全体を囲むクォートを削除
+    normalized = normalized.slice(1, -1);
+  }
+
+  return normalized;
+}
+
+/**
+ * A1記法範囲文字列からシート名とセル範囲を抽出
+ *
+ * @param headerRange - A1記法の範囲（例: "Sheet1!A1:B2", "'Sheet Name'!A1:B2"）
+ * @returns シート名とセル範囲
+ * @throws 無効な形式の場合
+ */
+function parseSheetNameAndRange(headerRange: string): {
+  sheetName: string;
+  cellRange: string;
+} {
+  // シート名に'!'が含まれる場合を考慮し、最初の'!'で分割
+  // 例: "'My!Sheet'!A1:B2" → sheetName="'My!Sheet'", cellRange="A1:B2"
+  const exclamationIndex = headerRange.indexOf('!');
+  if (exclamationIndex === -1) {
+    throw new Error('Range must be in format "SheetName!A1:B2"');
+  }
+
+  let sheetName = headerRange.substring(0, exclamationIndex);
+  const cellRange = headerRange.substring(exclamationIndex + 1);
+
+  // シート名がシングルクォートで囲まれている場合は削除
+  if (sheetName.startsWith("'") && sheetName.endsWith("'")) {
+    sheetName = sheetName.slice(1, -1);
+  }
+
+  if (!sheetName || !cellRange) {
+    throw new Error('Range must be in format "SheetName!A1:B2"');
+  }
+
+  return { sheetName, cellRange };
+}
+
+/**
  * Named Range設定の引数
  */
 export interface SetupNamedRangeArgs {
@@ -304,21 +362,7 @@ export async function setupNamedRange(
     }
 
     // 範囲指定を正規化
-    let headerRange = rawRange;
-
-    // シェルエスケープされた文字を正規化
-    headerRange = headerRange.replace(/\\!/g, '!'); // \! → !
-
-    // 範囲全体がシングルクォートで囲まれている場合（'Todos!E:E'のような誤った形式）
-    // ただし、Google Sheets形式のシート名エスケープ（'Sheet Name'!A1）は除外
-    if (
-      headerRange.startsWith("'") &&
-      headerRange.endsWith("'") &&
-      !headerRange.includes("'!")
-    ) {
-      // 範囲全体を囲むクォートを削除
-      headerRange = headerRange.slice(1, -1);
-    }
+    const headerRange = normalizeHeaderRange(rawRange);
 
     messages.push(
       `Setting up Named Range: ${chalk.bold(rangeName)} -> ${headerRange}`
@@ -326,19 +370,8 @@ export async function setupNamedRange(
 
     const sheets = await getSheetsClient();
 
-    // A1記法をパース（例: "Sheet1!A1:B2" or "'Sheet Name'!A1:B2" -> sheetName + cellRange）
-    const rangeParts = headerRange.split('!');
-    let sheetName = rangeParts[0];
-    const cellRange = rangeParts.slice(1).join('!');
-
-    // シート名がシングルクォートで囲まれている場合は削除
-    if (sheetName.startsWith("'") && sheetName.endsWith("'")) {
-      sheetName = sheetName.slice(1, -1);
-    }
-
-    if (!sheetName || !cellRange) {
-      throw new Error('Range must be in format "SheetName!A1:B2"');
-    }
+    // A1記法をパース
+    const { sheetName, cellRange } = parseSheetNameAndRange(headerRange);
 
     // API呼び出しを1回だけ実行（パフォーマンス最適化）
     const spreadsheetData = await getSpreadsheetData(sheets, spreadsheetId);
