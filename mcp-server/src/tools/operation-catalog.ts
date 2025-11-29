@@ -112,6 +112,17 @@ function getDataRange(ctx: OperationContext): string {
 }
 
 /**
+ * シート名を除いたデータ範囲（例: "A2:Z"）を取得
+ */
+function getDataRangeWithoutSheet(ctx: OperationContext): string {
+  const schema = ctx.schema;
+  const { firstCol, lastCol } = getColumnBounds(schema);
+  const headerRow = schema?.fields[0]?.row ?? 1;
+  const dataStart = headerRow + 1;
+  return `${firstCol}${dataStart}:${lastCol}`;
+}
+
+/**
  * 操作カタログ
  */
 export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
@@ -125,7 +136,7 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
     returnType: '{{featureName}}[]',
     generate: ctx => `
     const getAll = async (): Promise<${ctx.featureName}[]> => {
-      const response = await SheetsClient.batchGet(spreadsheetId, ['${getDataRange(ctx)}']);
+      const response = await SheetsClient.batchGet(spreadsheetId, [\`\${sheetName}!${getDataRangeWithoutSheet(ctx)}\`]);
       const rows = response.valueRanges?.[0]?.values || [];
 
       return rows
@@ -218,7 +229,7 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
       };
 
       const values = ${ctx.featureNameCamel}ToRow(updated);
-      const range = \`${sheetName}!A\${rowNumber}:Z\${rowNumber}\`;
+      const range = \`\${sheetName}!A\${rowNumber}:Z\${rowNumber}\`;
       await SheetsClient.updateValues(spreadsheetId, range, [values]);
     };`;
     },
@@ -243,7 +254,7 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
       if (index === -1) throw new Error(\`${ctx.featureName} \${${keyField}} not found\`);
 
       const rowNumber = index + 2;
-      const range = \`${sheetName}!A\${rowNumber}:Z\${rowNumber}\`;
+      const range = \`\${sheetName}!A\${rowNumber}:Z\${rowNumber}\`;
 
       const emptyValues = new Array(${ctx.schema?.fields.length || 10}).fill('');
       await SheetsClient.updateValues(spreadsheetId, range, [emptyValues]);
@@ -294,7 +305,7 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
     ],
     returnType: 'void',
     generate: () => `
-    const setRange = async (range: string, values: any[][]): Promise<void> => {
+    const setRange = async (range: string, values: (string | undefined)[][]): Promise<void> => {
       await SheetsClient.updateValues(spreadsheetId, range, values);
     };`,
   },
@@ -445,18 +456,18 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
       const items = await getAll();
       const updateMap = new Map(updates.map(u => [u.id, u.data]));
 
-      const valueRanges = items.reduce<Array<{ range: string; values: any[][] }>>((acc, item, index) => {
+      const valueRanges = items.reduce<Array<{ range: string; values: (string | undefined)[][] }>>((acc, item, index) => {
         const key = item.${keyField};
         if (key === undefined || key === null || key === '') return acc;
-        
-        const updateData = updateMap.get(key as string);
+
+        const updateData = updateMap.get(key);
         if (!updateData) return acc;
 
         const updated = { ...item, ...updateData, updatedAt: new Date().toISOString() };
         const rowNumber = index + 2;
 
         acc.push({
-          range: \`${sheetName}!A\${rowNumber}:Z\${rowNumber}\`,
+          range: \`\${sheetName}!A\${rowNumber}:Z\${rowNumber}\`,
           values: [${ctx.featureNameCamel}ToRow(updated)],
         });
         

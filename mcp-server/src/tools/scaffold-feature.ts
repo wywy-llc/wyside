@@ -69,6 +69,8 @@ export interface ScaffoldFeatureArgs {
   featureName: string;
   operations: string[];
   schema: FeatureSchema;
+  spreadsheetIdDev: string;
+  spreadsheetIdProd: string;
 }
 
 /**
@@ -98,6 +100,7 @@ interface TemplateData {
   operations: string[];
   timestamp: string;
   hasSchema: boolean;
+  hasCreateOperation?: boolean;
   typeDefinition?: string;
   rowToObject?: string;
   objectToRow?: string;
@@ -109,6 +112,12 @@ interface TemplateData {
   defaults?: Record<string, any>;
   operationCodes: string;
   exportsList: string;
+  schema?: {
+    spreadsheetIdDev?: string;
+    spreadsheetIdProd?: string;
+    sheetName?: string;
+    [key: string]: any;
+  };
 }
 
 /**
@@ -303,6 +312,11 @@ function buildSchemaData(
     defaults: generateDefaults(schema),
     operationCodes: operationCodes.join('\n'),
     exportsList,
+    schema: {
+      spreadsheetIdDev: schema.spreadsheetIdDev || '',
+      spreadsheetIdProd: schema.spreadsheetIdProd || '',
+      sheetName: schema.sheetName || '',
+    },
   };
 }
 
@@ -323,8 +337,12 @@ function buildTemplateData(
     schemaData.typeDefinition ||
     `export interface ${names.pascal} {\n  id?: string;\n  title?: string;\n  [key: string]: any;\n}`;
 
+  // create操作の有無をチェック
+  const hasCreateOperation = operationIds.includes('create');
+
   return {
     featureName: names.pascal,
+    hasCreateOperation,
     featureNameCamel: names.camel,
     operations: operationIds,
     timestamp: new Date().toISOString(),
@@ -333,6 +351,12 @@ function buildTemplateData(
     exportsList: '',
     typeDefinition: fallbackType,
     ...schemaData,
+    schema: {
+      spreadsheetIdDev: schemaData.schema?.spreadsheetIdDev || '',
+      spreadsheetIdProd: schemaData.schema?.spreadsheetIdProd || '',
+      sheetName: schemaData.schema?.sheetName || '',
+      ...(schemaData.schema || {}),
+    },
   };
 }
 
@@ -351,7 +375,13 @@ export async function scaffoldFeature(
 
   try {
     // Early validation
-    const { featureName, operations, schema } = args;
+    const {
+      featureName,
+      operations,
+      schema,
+      spreadsheetIdDev,
+      spreadsheetIdProd,
+    } = args;
     if (!featureName) {
       throw new Error('featureName is required');
     }
@@ -360,6 +390,19 @@ export async function scaffoldFeature(
     }
     if (!schema || !schema.fields || schema.fields.length === 0) {
       throw new Error('schema with at least one field is required');
+    }
+    if (!spreadsheetIdDev) {
+      throw new Error('spreadsheetIdDev is required');
+    }
+    if (!spreadsheetIdProd) {
+      throw new Error('spreadsheetIdProd is required');
+    }
+
+    // schemaにspreadsheetIdを追加（引数で上書き可能）
+    if (schema) {
+      schema.spreadsheetIdDev = spreadsheetIdDev || schema.spreadsheetId || '';
+      schema.spreadsheetIdProd =
+        spreadsheetIdProd || schema.spreadsheetId || '';
     }
 
     // 名前変換

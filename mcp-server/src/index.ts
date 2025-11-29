@@ -175,6 +175,14 @@ server.registerTool(
         'Schema definition for auto-generating CRUD operations with type-safe code. ' +
           'Generates TypeScript types, row/object converters, validation, and updates core/types.ts.'
       ),
+
+      spreadsheetIdDev: z
+        .string()
+        .describe('Spreadsheet ID for development environment'),
+
+      spreadsheetIdProd: z
+        .string()
+        .describe('Spreadsheet ID for production environment'),
     },
   },
   async (args: ScaffoldFeatureArgs) => {
@@ -230,7 +238,9 @@ server.registerTool(
     description:
       'Fetch header row from a sheet and infer FeatureSchema (columns → FieldSchema)',
     inputSchema: {
-      spreadsheetId: z.string().describe('Spreadsheet ID'),
+      spreadsheetIdDev: z
+        .string()
+        .describe('Spreadsheet ID for development environment'),
       sheetName: z.string().describe('Sheet name that contains the header row'),
       headers: z
         .array(z.string())
@@ -418,6 +428,8 @@ async function testScaffoldFeature(): Promise<void> {
       featureName: process.env.TEST_FEATURE_NAME,
       operations,
       schema,
+      spreadsheetIdDev: process.env.TEST_SPREADSHEET_ID_DEV || '1ABC-DEV',
+      spreadsheetIdProd: process.env.TEST_SPREADSHEET_ID_PROD || '1XYZ-PROD',
     });
     console.error('✅ Test result:', JSON.stringify(result, null, 2));
   } catch (error) {

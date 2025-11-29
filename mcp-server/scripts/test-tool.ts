@@ -80,6 +80,16 @@ const TOOL_REGISTRY = {
         index: 3,
         transform: (value: string) => JSON.parse(value),
       },
+      {
+        name: 'spreadsheetIdDev',
+        required: true,
+        index: 4,
+      },
+      {
+        name: 'spreadsheetIdProd',
+        required: true,
+        index: 5,
+      },
     ],
     handler: scaffoldFeature,
   } satisfies ToolDefinition<ScaffoldFeatureArgs>,
@@ -112,7 +122,7 @@ const TOOL_REGISTRY = {
 
   infer_schema_from_sheet: {
     args: [
-      { name: 'spreadsheetId', required: true, index: 1 },
+      { name: 'spreadsheetIdDev', required: true, index: 1 },
       { name: 'sheetName', required: true, index: 2 },
       {
         name: 'headers',

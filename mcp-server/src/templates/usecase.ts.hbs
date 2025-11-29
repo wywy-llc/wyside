@@ -1,4 +1,3 @@
-import { getSpreadsheetId, SpreadsheetType } from '../../config.js';
 import { {{featureName}} } from '../../core/types.js';
 import { Universal{{featureName}}Repo } from './Universal{{featureName}}Repo.js';
 
@@ -20,11 +19,17 @@ import { Universal{{featureName}}Repo } from './Universal{{featureName}}Repo.js'
  * ```
  */
 export const {{featureName}}UseCase = (() => {
-  // TODO: Update SpreadsheetType to match your feature
-  const spreadsheetId = getSpreadsheetId(SpreadsheetType.TODOS);
+  // Auto-generated from schema
+  // Environment detection: GAS uses ScriptApp, Node.js uses process
+  const isProduction = typeof ScriptApp !== 'undefined';
+
+  const spreadsheetId = isProduction
+    ? '{{schema.spreadsheetIdProd}}'
+    : '{{schema.spreadsheetIdDev}}';
+  const sheetName = '{{schema.sheetName}}';
 
   // Cache repository instance to avoid redundant creation
-  const repo = Universal{{featureName}}Repo.create(spreadsheetId);
+  const repo = Universal{{featureName}}Repo.create(spreadsheetId, sheetName);
 
 {{#if hasSchema}}
   /**
@@ -32,30 +37,50 @@ export const {{featureName}}UseCase = (() => {
    *
    * Available repository operations: {{{exportsList}}}
    *
+   * 💡 sheetName変数の使い方:
+   * - ログ出力: console.log(`Processing ${sheetName} data...`)
+   * - エラーメッセージ: throw new Error(`Failed to update ${sheetName}`)
+   * - メタデータ管理: 複数シートを扱う場合の識別子として使用
+   *
    * Example implementation (uncomment and modify as needed):
+   *
    * const list = async (): Promise<{{featureName}}[]> => {
+   *   console.log(`Fetching all records from ${sheetName}...`);
    *   return repo.getAll();
+   * };
+   *
+   * const getById = async (id: string): Promise<{{featureName}} | null> => {
+   *   const items = await repo.getAll();
+   *   return items.find(item => item.mailId === id) || null;
    * };
    *
    * const create = async (data: Partial<{{featureName}}>): Promise<{{featureName}}> => {
 {{#if validation}}
    *   {{{validation}}}
 {{/if}}
+   *   console.log(`Creating new record in ${sheetName}...`);
    *   return repo.create(data);
    * };
    *
    * const update = async (id: string, updates: Partial<{{featureName}}>): Promise<void> => {
+   *   console.log(`Updating record ${id} in ${sheetName}...`);
    *   await repo.update(id, updates);
    * };
    *
    * const deleteById = async (id: string): Promise<void> => {
+   *   console.log(`Deleting record ${id} from ${sheetName}...`);
    *   await repo.delete(id);
+   * };
+   *
+   * const searchByStatus = async (status: string): Promise<{{featureName}}[]> => {
+   *   const items = await repo.getAll();
+   *   return items.filter(item => item.status === status);
    * };
    */
 
   return {
     // TODO: Export your use case methods here
-    // Example: list, create, update, delete: deleteById
+    // Example: list, getById, create, update, delete: deleteById, searchByStatus
   } as const;
 {{else}}
   /**

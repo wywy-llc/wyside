@@ -46,6 +46,12 @@ export interface FeatureSchema {
   sheetName: string;
   /** ヘッダー行の範囲（例: "A1:E1"） ※シート名は含めない */
   headerRange: string;
+  /** スプレッドシートID (infer_schema_from_sheetから渡される) */
+  spreadsheetId?: string;
+  /** スプレッドシートID（開発環境） */
+  spreadsheetIdDev?: string;
+  /** スプレッドシートID（本番環境） */
+  spreadsheetIdProd?: string;
 }
 
 /**
@@ -205,7 +211,7 @@ export function generateObjectToRow(
     return `    ${value},`;
   });
 
-  return `  const ${featureName}ToRow = (${featureName}: ${pascalName}): any[] => [
+  return `  const ${featureName}ToRow = (${featureName}: ${pascalName}): (string | undefined)[] => [
 ${mappings.join('\n')}
   ];`;
 }

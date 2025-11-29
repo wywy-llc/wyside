@@ -2,7 +2,9 @@ import { SheetsClient } from '../../core/client.js';
 import {
   {{featureName}}
 } from '../../core/types.js';
+{{#if hasCreateOperation}}
 import { generateUuid } from '../../core/utils.js';
+{{/if}}
 
 /**
  * Universal {{featureName}} repository factory for GAS/Node.js environments
@@ -27,7 +29,7 @@ export const Universal{{featureName}}Repo = (() => {
   /**
    * ✅ GASとNode.jsで完全に同一の実装
    */
-  const create = (spreadsheetId: string) => {
+  const create = (spreadsheetId: string, sheetName: string = '{{sheetName}}') => {
 {{#if hasSchema}}
     // Conversion helpers
     {{{rowToObject}}}

@@ -4,6 +4,28 @@
  * Spreadsheet IDs are loaded from environment variables:
  * APP_SPREADSHEET_ID_{N}_DEV or APP_SPREADSHEET_ID_{N}_PROD (1-5)
  *
+ * ## 環境検出関数
+ *
+ * GAS環境とNode.js環境を判定するためのユーティリティ関数を提供
+ */
+
+/**
+ * Check if code is running in Google Apps Script environment
+ * @returns true if running in GAS, false otherwise
+ */
+export function isGasEnvironment(): boolean {
+  return typeof ScriptApp !== 'undefined';
+}
+
+/**
+ * Check if code is running in Node.js environment
+ * @returns true if running in Node.js, false otherwise
+ */
+export function isNodeEnvironment(): boolean {
+  return typeof ScriptApp === 'undefined';
+}
+
+/**
  * ## wysideの初期化フローとファイル配置
  *
  * ### 1. ユーザーがwysideを初期化

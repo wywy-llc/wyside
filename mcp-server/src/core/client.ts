@@ -1,239 +1,207 @@
-import { google, sheets_v4 } from 'googleapis';
+import { getOAuthToken } from '../utils/auth.js';
+import { Fetch } from '../utils/fetch.js';
 
 /**
- * Google Sheets APIクライアントのインスタンス型
- *
- * @remarks Node.js環境専用。googleapisライブラリを使用
+ * Sheets API Response Types
+ * 最小限の型定義でESLintエラーを回避
  */
-export type SheetsClientInstance = sheets_v4.Sheets;
+interface ValueRange {
+  range?: string;
+  values?: string[][];
+}
 
-/**
- * Google Sheets APIクライアントを取得
- *
- * @returns Sheets APIクライアントのインスタンス
- * @remarks 環境変数GOOGLE_APPLICATION_CREDENTIALSからサービスアカウントキーを読み込み
- */
-export async function getSheetsClient(): Promise<SheetsClientInstance> {
-  const auth = new google.auth.GoogleAuth({
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-  });
+interface BatchGetValuesResponse {
+  valueRanges?: ValueRange[];
+}
 
-  const sheets = google.sheets({ version: 'v4', auth });
-
-  return sheets;
+interface SheetsApiError {
+  error?: {
+    code?: number;
+    message?: string;
+    status?: string;
+  };
 }
 
 /**
- * Sheets APIクライアントの基本操作を提供するユーティリティ
- * IIFEパターンで実装され、内部でクライアントインスタンスを管理
+ * Generic type for Sheets API responses (success or error)
+ */
+type SheetsApiResponse<T> = (T & Partial<SheetsApiError>) | SheetsApiError;
+
+/**
+ * Sheets client with methods for interacting with Google Sheets API
+ *
+ * 🚨 重要: GAS環境ではfetch APIが存在しないため、UrlFetchAppを使用したポリフィルを実装
+ * 認証部分のみ環境依存、それ以外は完全に同一のコード
+ *
+ * ✅ この実装はtemplate/src/core/client.tsと完全に同一
+ * - Node.js環境: googleapis Service Account経由でOAuth token取得、fetch API使用
+ * - GAS環境: ScriptApp.getOAuthToken()、UrlFetchApp使用
  *
  * @example
  * ```typescript
  * import { SheetsClient } from './core/client.js';
  *
  * const data = await SheetsClient.batchGet(spreadsheetId, ['Sheet1!A1:B10']);
- * await SheetsClient.batchUpdate(spreadsheetId, requests);
+ * await SheetsClient.batchUpdate(spreadsheetId, [requests]);
  * ```
  */
 export const SheetsClient = (() => {
-  let clientInstance: SheetsClientInstance | null = null;
-
-  const columnToIndex = (column: string): number => {
-    let index = 0;
-    for (let i = 0; i < column.length; i++) {
-      index = index * 26 + (column.charCodeAt(i) - 64);
-    }
-    return index - 1;
-  };
-
-  const parseA1Range = (
-    range: string
-  ): {
-    sheet?: string;
-    startRow?: number;
-    endRow?: number;
-    startCol?: number;
-    endCol?: number;
-  } => {
-    const match = range.match(
-      /^(?:(?<sheet>[^!]+)!){0,1}(?<startCol>[A-Z]+)?(?<startRow>\\d+)?(?::(?<endCol>[A-Z]+)?(?<endRow>\\d+)?)?$/
-    );
-    if (!match || !match.groups) {
-      return {};
-    }
-
-    const sheet = match.groups.sheet;
-    const startCol = match.groups.startCol
-      ? columnToIndex(match.groups.startCol)
-      : undefined;
-    const endCol = match.groups.endCol
-      ? columnToIndex(match.groups.endCol) + 1
-      : startCol !== undefined
-        ? startCol + 1
-        : undefined;
-    const startRow = match.groups.startRow
-      ? Number(match.groups.startRow) - 1
-      : undefined;
-    const endRow = match.groups.endRow
-      ? Number(match.groups.endRow)
-      : startRow !== undefined
-        ? startRow + 1
-        : undefined;
-
-    return { sheet, startCol, endCol, startRow, endRow };
-  };
-
   /**
-   * クライアントインスタンスを取得または作成
+   * ✅ GASとNode.jsで完全に同一のfetch実装
    */
-  const getClient = async (): Promise<SheetsClientInstance> => {
-    if (!clientInstance) {
-      clientInstance = await getSheetsClient();
+  const batchUpdate = async (
+    spreadsheetId: string,
+    requests: any[]
+  ): Promise<any> => {
+    const token = await getOAuthToken([
+      'https://www.googleapis.com/auth/spreadsheets',
+    ]);
+
+    const response = await Fetch.request(
+      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ requests }),
+      }
+    );
+
+    const data = (await response.json()) as unknown as SheetsApiResponse<any>;
+    if (!response.ok) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Sheets API error object structure
+      const errorMessage = data.error?.message || 'Unknown';
+      throw new Error(`Sheets API Error [${response.status}]: ${errorMessage}`);
     }
-    return clientInstance;
+    return data;
+  };
+
+  const batchGet = async (
+    spreadsheetId: string,
+    ranges: string[]
+  ): Promise<BatchGetValuesResponse> => {
+    const token = await getOAuthToken([
+      'https://www.googleapis.com/auth/spreadsheets',
+    ]);
+    const rangesQuery = ranges
+      .map(r => `ranges=${encodeURIComponent(r)}`)
+      .join('&');
+
+    const response = await Fetch.request(
+      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?${rangesQuery}`,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    const data =
+      (await response.json()) as unknown as SheetsApiResponse<BatchGetValuesResponse>;
+    if (!response.ok) {
+      const errorMessage = data.error?.message || 'Unknown';
+      throw new Error(`Sheets API Error [${response.status}]: ${errorMessage}`);
+    }
+    return data as BatchGetValuesResponse;
+  };
+
+  const appendValues = async (
+    spreadsheetId: string,
+    range: string,
+    values: any[][]
+  ): Promise<any> => {
+    const token = await getOAuthToken([
+      'https://www.googleapis.com/auth/spreadsheets',
+    ]);
+
+    const response = await Fetch.request(
+      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}:append?valueInputOption=RAW`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ values }),
+      }
+    );
+
+    const data = (await response.json()) as unknown as SheetsApiResponse<any>;
+    if (!response.ok) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Sheets API error object structure
+      const errorMessage = data.error?.message || 'Unknown';
+      throw new Error(`Sheets API Error [${response.status}]: ${errorMessage}`);
+    }
+    return data;
+  };
+
+  const updateValues = async (
+    spreadsheetId: string,
+    range: string,
+    values: any[][]
+  ): Promise<any> => {
+    const token = await getOAuthToken([
+      'https://www.googleapis.com/auth/spreadsheets',
+    ]);
+
+    const response = await Fetch.request(
+      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}?valueInputOption=RAW`,
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ values }),
+      }
+    );
+
+    const data = (await response.json()) as unknown as SheetsApiResponse<any>;
+    if (!response.ok) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Sheets API error object structure
+      const errorMessage = data.error?.message || 'Unknown';
+      throw new Error(`Sheets API Error [${response.status}]: ${errorMessage}`);
+    }
+    return data;
+  };
+
+  const batchUpdateValues = async (
+    spreadsheetId: string,
+    valueRanges: Array<{ range: string; values: any[][] }>
+  ): Promise<any> => {
+    const token = await getOAuthToken([
+      'https://www.googleapis.com/auth/spreadsheets',
+    ]);
+
+    const response = await Fetch.request(
+      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchUpdate?valueInputOption=RAW`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ data: valueRanges }),
+      }
+    );
+
+    const data = (await response.json()) as unknown as SheetsApiResponse<any>;
+    if (!response.ok) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Sheets API error object structure
+      const errorMessage = data.error?.message || 'Unknown';
+      throw new Error(`Sheets API Error [${response.status}]: ${errorMessage}`);
+    }
+    return data;
   };
 
   return {
-    /**
-     * batchUpdateを実行
-     *
-     * @param spreadsheetId - スプレッドシートID
-     * @param requests - 更新リクエストの配列
-     * @returns APIレスポンス
-     */
-    async batchUpdate(
-      spreadsheetId: string,
-      requests: any[]
-    ): Promise<sheets_v4.Schema$BatchUpdateSpreadsheetResponse> {
-      const client = await getClient();
-      const response = await client.spreadsheets.batchUpdate({
-        spreadsheetId,
-        requestBody: { requests },
-      });
-      return response.data;
-    },
-
-    /**
-     * batchGetを実行
-     *
-     * @param spreadsheetId - スプレッドシートID
-     * @param ranges - 取得する範囲の配列（A1記法）
-     * @returns APIレスポンス
-     */
-    async batchGet(
-      spreadsheetId: string,
-      ranges: string[]
-    ): Promise<sheets_v4.Schema$BatchGetValuesResponse> {
-      const client = await getClient();
-      const response = await client.spreadsheets.values.batchGet({
-        spreadsheetId,
-        ranges,
-      });
-      return response.data;
-    },
-
-    /**
-     * 値をクリア
-     *
-     * @param spreadsheetId - スプレッドシートID
-     * @param range - クリアする範囲（A1記法）
-     */
-    async clearValues(
-      spreadsheetId: string,
-      range: string
-    ): Promise<sheets_v4.Schema$ClearValuesResponse> {
-      const client = await getClient();
-      const response = await client.spreadsheets.values.clear({
-        spreadsheetId,
-        range,
-        requestBody: {},
-      });
-      return response.data;
-    },
-
-    /**
-     * 値を追加
-     *
-     * @param spreadsheetId - スプレッドシートID
-     * @param range - 追加先の範囲（A1記法）
-     * @param values - 追加する値の2次元配列
-     * @returns APIレスポンス
-     */
-    async appendValues(
-      spreadsheetId: string,
-      range: string,
-      values: any[][]
-    ): Promise<sheets_v4.Schema$AppendValuesResponse> {
-      const client = await getClient();
-      const response = await client.spreadsheets.values.append({
-        spreadsheetId,
-        range,
-        valueInputOption: 'RAW',
-        requestBody: { values },
-      });
-      return response.data;
-    },
-
-    /**
-     * 値を更新
-     *
-     * @param spreadsheetId - スプレッドシートID
-     * @param range - 更新する範囲（A1記法）
-     * @param values - 更新する値の2次元配列
-     * @returns APIレスポンス
-     */
-    async updateValues(
-      spreadsheetId: string,
-      range: string,
-      values: any[][]
-    ): Promise<sheets_v4.Schema$UpdateValuesResponse> {
-      const client = await getClient();
-      const response = await client.spreadsheets.values.update({
-        spreadsheetId,
-        range,
-        valueInputOption: 'RAW',
-        requestBody: { values },
-      });
-      return response.data;
-    },
-
-    /**
-     * 複数の範囲の値を一括更新
-     *
-     * @param spreadsheetId - スプレッドシートID
-     * @param valueRanges - 更新する範囲と値の配列
-     * @returns APIレスポンス
-     */
-    async batchUpdateValues(
-      spreadsheetId: string,
-      valueRanges: Array<{ range: string; values: any[][] }>
-    ): Promise<sheets_v4.Schema$BatchUpdateValuesResponse> {
-      const client = await getClient();
-      const response = await client.spreadsheets.values.batchUpdate({
-        spreadsheetId,
-        requestBody: {
-          valueInputOption: 'RAW',
-          data: valueRanges,
-        },
-      });
-      return response.data;
-    },
-
-    /**
-     * A1記法をGridRangeへ変換
-     *
-     * @param range - A1記法の範囲
-     */
-    a1ToGridRange(range: string): sheets_v4.Schema$GridRange {
-      const { startCol, endCol, startRow, endRow } = parseA1Range(range);
-
-      return {
-        sheetId: undefined,
-        startColumnIndex: startCol,
-        endColumnIndex: endCol,
-        startRowIndex: startRow,
-        endRowIndex: endRow,
-      };
-    },
+    batchUpdate,
+    batchGet,
+    appendValues,
+    updateValues,
+    batchUpdateValues,
   } as const;
 })();
