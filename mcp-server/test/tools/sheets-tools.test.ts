@@ -321,7 +321,7 @@ describe('sheets-tools', () => {
     it('存在しないシート名で、"not found"エラーが返される', async () => {
       // テストデータ: 存在しないシート名（NonExistentSheet）
       const args = SetupNamedRangeArgsFactory.build({
-        range: 'NonExistentSheet!A1:B2',
+        headerRange: 'NonExistentSheet!A1:B2',
       });
 
       // モック: 異なるシート名（DifferentSheet）のスプレッドシート

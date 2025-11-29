@@ -203,7 +203,9 @@ describe('scaffoldFeature', () => {
     });
 
     it('operations未指定でエラー', async () => {
-      const args = ScaffoldFeatureArgsFactory.basicTask({ operations: [] as string[] });
+      const args = ScaffoldFeatureArgsFactory.basicTask({
+        operations: [] as string[],
+      });
 
       const result = await scaffoldFeature(args as any);
 
@@ -213,7 +215,6 @@ describe('scaffoldFeature', () => {
 
     it('schema未指定でエラー', async () => {
       const args = ScaffoldFeatureArgsFactory.basicTask();
-      // @ts-expect-error force invalid
       const invalidArgs = { ...args, schema: undefined };
 
       const result = await scaffoldFeature(invalidArgs as any);

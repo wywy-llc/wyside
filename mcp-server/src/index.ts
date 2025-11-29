@@ -19,6 +19,7 @@ import {
   scaffoldFeature,
   type ScaffoldFeatureArgs,
 } from './tools/scaffold-feature.js';
+import type { FeatureSchema } from './tools/schema-generator.js';
 import {
   setupNamedRange,
   type SetupNamedRangeArgs,
@@ -351,12 +352,21 @@ async function testScaffoldFeature(): Promise<void> {
   console.error('\n📋 Testing scaffold_feature...');
   try {
     const operations = process.env.TEST_FEATURE_OPERATIONS?.split(',') || [
+      'getAll',
       'create',
-      'read',
     ];
+    const schema: FeatureSchema = process.env.TEST_FEATURE_SCHEMA
+      ? JSON.parse(process.env.TEST_FEATURE_SCHEMA)
+      : {
+          sheetName: 'TestSheet',
+          headerRange: 'A1:A1',
+          fields: [{ name: 'id', type: 'string', column: 'A', required: true }],
+        };
+
     const result = await scaffoldFeature({
       featureName: process.env.TEST_FEATURE_NAME,
       operations,
+      schema,
     });
     console.error('✅ Test result:', JSON.stringify(result, null, 2));
   } catch (error) {

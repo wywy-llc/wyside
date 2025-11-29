@@ -1,5 +1,6 @@
 import * as Factory from 'factory.ts';
 import type { ScaffoldFeatureArgs } from '../../src/tools/scaffold-feature';
+import type { FieldSchema } from '../../src/tools/schema-generator';
 import { FeatureSchemaFactory } from './operation-catalog.factory';
 
 // ===== Preset Definitions =====
@@ -14,9 +15,9 @@ const SCAFFOLD_ARGS_PRESETS = {
     operations: ['getAll', 'create'] as string[],
     schema: {
       fields: [
-        { name: 'id', type: 'string' as const, column: 'A', required: true },
-        { name: 'title', type: 'string' as const, column: 'B', required: true },
-      ],
+        { name: 'id', type: 'string', column: 'A', required: true },
+        { name: 'title', type: 'string', column: 'B', required: true },
+      ] as FieldSchema[],
       sheetName: 'Tasks',
       headerRange: 'A1:B1',
     },
@@ -27,13 +28,13 @@ const SCAFFOLD_ARGS_PRESETS = {
     operations: ['batchUpdate', 'getAll'] as string[],
     schema: {
       fields: [
-        { name: 'mailId', type: 'string' as const, column: 'A' },
-        { name: 'mailIdBranch', type: 'string' as const, column: 'B' },
-        { name: 'subject', type: 'string' as const, column: 'C' },
-        { name: 'receivedDate', type: 'string' as const, column: 'D' },
-        { name: 'reviewer', type: 'string' as const, column: 'E' },
-        { name: 'status', type: 'string' as const, column: 'F' },
-      ],
+        { name: 'mailId', type: 'string', column: 'A' },
+        { name: 'mailIdBranch', type: 'string', column: 'B' },
+        { name: 'subject', type: 'string', column: 'C' },
+        { name: 'receivedDate', type: 'string', column: 'D' },
+        { name: 'reviewer', type: 'string', column: 'E' },
+        { name: 'status', type: 'string', column: 'F' },
+      ] as FieldSchema[],
       sheetName: 'メールボックス',
       headerRange: 'A3:R3',
     },
@@ -43,7 +44,7 @@ const SCAFFOLD_ARGS_PRESETS = {
     featureName: 'Data',
     operations: ['getAll'] as string[],
     schema: {
-      fields: [{ name: 'value', type: 'string' as const, column: 'A' }],
+      fields: [{ name: 'value', type: 'string', column: 'A' }] as FieldSchema[],
       sheetName: 'Data',
       headerRange: 'A1:C1',
     },
@@ -54,9 +55,9 @@ const SCAFFOLD_ARGS_PRESETS = {
     operations: ['all'] as string[],
     schema: {
       fields: [
-        { name: 'id', type: 'string' as const, column: 'A', required: true },
-        { name: 'name', type: 'string' as const, column: 'B', required: true },
-      ],
+        { name: 'id', type: 'string', column: 'A', required: true },
+        { name: 'name', type: 'string', column: 'B', required: true },
+      ] as FieldSchema[],
       sheetName: 'Items',
       headerRange: 'A1:B1',
     },
@@ -66,7 +67,9 @@ const SCAFFOLD_ARGS_PRESETS = {
     featureName: 'Custom',
     operations: ['getAll'] as string[],
     schema: {
-      fields: [{ name: 'id', type: 'string' as const, column: 'A', required: true }],
+      fields: [
+        { name: 'id', type: 'string' as const, column: 'A', required: true },
+      ],
       sheetName: 'Custom',
       headerRange: 'A1:A1',
     },
@@ -76,7 +79,7 @@ const SCAFFOLD_ARGS_PRESETS = {
     featureName: 'Simple',
     operations: ['getAll'] as string[],
     schema: {
-      fields: [{ name: 'id', type: 'string' as const, column: 'A' }],
+      fields: [{ name: 'id', type: 'string', column: 'A' }] as FieldSchema[],
       sheetName: 'Simple',
       headerRange: 'A1:A1',
     },

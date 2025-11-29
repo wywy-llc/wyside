@@ -158,13 +158,16 @@ function getColumnBounds(schema: FeatureSchema): {
   return { firstCol, lastCol };
 }
 
-function normalizeHeaderRange(schema: FeatureSchema): {
+type NormalizedHeaderRange = {
   sheet: string;
   startCol: string;
   endCol: string;
   headerRow: number;
   headerRange: string;
-} {
+  dataRange: string;
+};
+
+function normalizeHeaderRange(schema: FeatureSchema): NormalizedHeaderRange {
   const { firstCol, lastCol } = getColumnBounds(schema);
   const rawHeader = schema.headerRange || `${firstCol}1:${lastCol}1`;
   const headerWithSheet = `${schema.sheetName}!${rawHeader}`;
