@@ -17,6 +17,11 @@ export interface InferSchemaArgs {
 const SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets.readonly';
 const TRANSLATE_SCOPE = 'https://www.googleapis.com/auth/cloud-translation';
 
+// スキャン範囲の定数（拡張性を考慮）
+const SCAN_RANGE_COLUMNS = 26; // A-Z列（26列）
+const SCAN_RANGE_ROWS = 100; // 最大100行をスキャン
+const SCAN_RANGE_START_CELL = 'A1';
+
 function columnIndexToLetter(index: number): string {
   let num = index + 1;
   let letters = '';
@@ -46,6 +51,8 @@ export async function inferSchemaFromSheet(
 ): Promise<ToolResult> {
   try {
     const { spreadsheetId, sheetName, headers, lang } = args;
+
+    // 入力バリデーション
     if (!spreadsheetId || !sheetName) {
       throw new Error('spreadsheetId and sheetName are required');
     }
@@ -53,11 +60,16 @@ export async function inferSchemaFromSheet(
       throw new Error('headers must be a non-empty array');
     }
 
+    // Google APIs クライアント初期化
     const auth = new GoogleAuth({ scopes: [SHEETS_SCOPE, TRANSLATE_SCOPE] });
     const sheets = google.sheets({ version: 'v4', auth });
     const translate = google.translate({ version: 'v2', auth });
-    const scanRange = `${sheetName}!A1:Z100`;
 
+    // スキャン範囲を定数から生成
+    const scanEndColLetter = columnIndexToLetter(SCAN_RANGE_COLUMNS - 1);
+    const scanRange = `${sheetName}!${SCAN_RANGE_START_CELL}:${scanEndColLetter}${SCAN_RANGE_ROWS}`;
+
+    // Sheets API: データ取得
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
       range: scanRange,
@@ -68,15 +80,16 @@ export async function inferSchemaFromSheet(
     let headerRowIndex = -1;
     let startColIndex = -1;
 
-    for (let r = 0; r < values.length; r++) {
-      const row = values[r] || [];
-      for (let c = 0; c < row.length; c++) {
+    // ヘッダー行の検索
+    for (let rowIdx = 0; rowIdx < values.length; rowIdx++) {
+      const row = values[rowIdx] || [];
+      for (let colIdx = 0; colIdx < row.length; colIdx++) {
         const slice = row
-          .slice(c, c + headers.length)
+          .slice(colIdx, colIdx + headers.length)
           .map(v => String(v || '').trim());
         if (headers.every((h, i) => slice[i] === h.trim())) {
-          headerRowIndex = r;
-          startColIndex = c;
+          headerRowIndex = rowIdx;
+          startColIndex = colIdx;
           break;
         }
       }
@@ -87,14 +100,16 @@ export async function inferSchemaFromSheet(
       throw new Error('header row not found in the provided sheet/headers');
     }
 
+    // 範囲文字列の生成
     const endColIndex = startColIndex + headers.length - 1;
     const startColLetter = columnIndexToLetter(startColIndex);
     const endColLetter = columnIndexToLetter(endColIndex);
 
-    const headerRowNumber = headerRowIndex + 1; // 1-based
+    const headerRowNumber = headerRowIndex + 1; // 1-based行番号
     const headerRange = `${sheetName}!${startColLetter}${headerRowNumber}:${endColLetter}${headerRowNumber}`;
     const dataRange = `${sheetName}!${startColLetter}${headerRowNumber + 1}:${endColLetter}`;
 
+    // ヘッダー翻訳（langが指定されている場合）
     let translatedHeaders = headers;
     if (lang) {
       try {
@@ -108,10 +123,12 @@ export async function inferSchemaFromSheet(
           translationData.translations?.map(t => t.translatedText || '') ||
           headers;
       } catch {
+        // 翻訳失敗時は元のヘッダーを使用（ログ出力は行わない）
         translatedHeaders = headers;
       }
     }
 
+    // FieldSchema 配列の生成
     const fields: FieldSchema[] = translatedHeaders.map((translated, idx) => {
       const original = headers[idx];
       const fallbackName = `field${idx + 1}`;
