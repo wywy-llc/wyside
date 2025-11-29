@@ -21,6 +21,7 @@ import {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const projectRoot = path.resolve(__dirname, '..');
 
 // 定数定義
 const TEMPLATE_FILES = {
@@ -203,7 +204,7 @@ async function upsertCoreTypes(
 ): Promise<void> {
   if (!typeDefinition) return;
 
-  const typesPath = path.join(process.cwd(), 'src/core/types.ts');
+  const typesPath = path.join(projectRoot, 'src/core/types.ts');
   let content = '';
   try {
     content = await fs.readFile(typesPath, 'utf-8');
@@ -233,7 +234,7 @@ async function upsertCoreConstants(
 ): Promise<void> {
   if (!rangeName || !range) return;
 
-  const constantsPath = path.join(process.cwd(), 'src/core/constants.ts');
+  const constantsPath = path.join(projectRoot, 'src/core/constants.ts');
   let content = '';
   try {
     content = await fs.readFile(constantsPath, 'utf-8');
@@ -383,7 +384,7 @@ export async function scaffoldFeature(
 
     // ディレクトリ準備
     const templatesDir = await resolveTemplatesDir();
-    const targetDir = path.join(process.cwd(), 'src/features', names.camel);
+    const targetDir = path.join(projectRoot, 'src/features', names.camel);
     await fs.mkdir(targetDir, { recursive: true });
 
     // テンプレート読み込み

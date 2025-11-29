@@ -95,11 +95,6 @@ export const SheetsClient = (() => {
 
   return {
     /**
-     * Sheets APIクライアントを作成（互換性のため維持）
-     */
-    create: getSheetsClient,
-
-    /**
      * batchUpdateを実行
      *
      * @param spreadsheetId - スプレッドシートID

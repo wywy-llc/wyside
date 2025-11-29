@@ -103,11 +103,23 @@ export interface Test {
  */
 export interface MedicalSheet {
   id?: string;
-  mailId: string;
-  mailIdBranch: string;
-  subject: string;
-  receivedDate: string;
-  reviewer: string;
-  status: string;
+  mailId?: string;
+  mailIdBranch?: string;
+  subject?: string;
+  receivedDate?: string;
+  reviewer?: string;
+  status?: string;
+  category?: string;
+  emailAddress?: string;
+  advertisingMedia?: string;
+  firstPreferredDate?: string;
+  firstPreferredClinic?: string;
+  inquiryMethod?: string;
+  tag?: string;
+  reviewedDate?: string;
+  hasDeficiency?: string;
+  deficiencyDetails?: string;
+  correctionCompletedDate?: string;
+  forAggregation?: string;
   updatedAt?: string;
 }

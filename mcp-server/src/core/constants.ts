@@ -9,3 +9,4 @@ export const RANGE_4 = 'A2:B';
 export const RANGE_8 = 'A2:A';
 export const ITEM_RANGE = 'Items!A2:B';
 export const TASK_RANGE = 'Tasks!A2:E';
+export const MEDICALSHEET_RANGE = 'A3:R';
