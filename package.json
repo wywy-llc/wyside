@@ -29,6 +29,7 @@
     "clean": "rimraf build",
     "lint": "eslint --fix src/ test/",
     "lint:staged": "lint-staged",
+    "format": "prettier --write --log-level silent .",
     "build": "npm run clean && npm run lint && tsc && npm run copy-files && (cd mcp-server && npm install && npm run build)",
     "test": "vitest run",
     "copy-files": "ncp .gitignore dist/.gitignore-target",

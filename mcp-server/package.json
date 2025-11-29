@@ -6,6 +6,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node build/index.js",
+    "format": "prettier --write --log-level silent .",
     "dev": "tsc --watch",
     "test": "vitest",
     "test:ui": "vitest --ui",
