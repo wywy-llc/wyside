@@ -142,7 +142,7 @@ describe('inferSchemaFromSheet', () => {
       setupSuccessfulMocks([TEST_HEADERS_JA, ['1', 'foo']], TEST_TRANSLATIONS);
 
       const result = await inferSchemaFromSheet({
-        spreadsheetIdDev: TEST_SPREADSHEET_ID,
+        spreadsheetId: TEST_SPREADSHEET_ID,
         sheetName: TEST_SHEET_NAME,
         headers: TEST_HEADERS_JA,
         headerStartCell: 'A1',
@@ -157,7 +157,7 @@ describe('inferSchemaFromSheet', () => {
       expect(payload.sheetName).toBe(TEST_SHEET_NAME);
       expect(payload.headerRange).toBe(EXPECTED_HEADER_RANGE_2_COLS);
       expect(payload.dataRange).toBe(EXPECTED_DATA_RANGE_2_COLS);
-      expect(payload.spreadsheetIdDev).toBe(TEST_SPREADSHEET_ID);
+      expect(payload.spreadsheetId).toBe(TEST_SPREADSHEET_ID);
 
       // 検証3: フィールド定義（2列: A, B）
       expect(payload.fields).toHaveLength(2);
@@ -179,7 +179,7 @@ describe('inferSchemaFromSheet', () => {
       );
 
       const result = await inferSchemaFromSheet({
-        spreadsheetIdDev: TEST_SPREADSHEET_ID,
+        spreadsheetId: TEST_SPREADSHEET_ID,
         sheetName: TEST_SHEET_NAME,
         headers: TEST_HEADERS_JA_EXTENDED,
         headerStartCell: 'A1',
@@ -233,7 +233,7 @@ describe('inferSchemaFromSheet', () => {
       });
 
       const result = await inferSchemaFromSheet({
-        spreadsheetIdDev: TEST_SPREADSHEET_ID,
+        spreadsheetId: TEST_SPREADSHEET_ID,
         sheetName: TEST_SHEET_NAME,
         headers: englishHeaders,
         headerStartCell: 'A1',
@@ -265,7 +265,7 @@ describe('inferSchemaFromSheet', () => {
       );
 
       const result = await inferSchemaFromSheet({
-        spreadsheetIdDev: TEST_SPREADSHEET_ID,
+        spreadsheetId: TEST_SPREADSHEET_ID,
         sheetName: TEST_SHEET_NAME_SPECIAL,
         headers: TEST_HEADERS_JA,
         headerStartCell: 'A1',
@@ -309,7 +309,7 @@ describe('inferSchemaFromSheet', () => {
       });
 
       const result = await inferSchemaFromSheet({
-        spreadsheetIdDev: TEST_SPREADSHEET_ID,
+        spreadsheetId: TEST_SPREADSHEET_ID,
         sheetName: TEST_SHEET_NAME,
         headers: TEST_HEADERS_JA,
         headerStartCell: 'A1',
@@ -358,7 +358,7 @@ describe('inferSchemaFromSheet', () => {
       });
 
       const result = await inferSchemaFromSheet({
-        spreadsheetIdDev: TEST_SPREADSHEET_ID,
+        spreadsheetId: TEST_SPREADSHEET_ID,
         sheetName: TEST_SHEET_NAME,
         headers: TEST_HEADERS_JA,
         headerStartCell: 'A1',

@@ -91,7 +91,7 @@ describe('infer-schema-from-sheet + schema-generator integration', () => {
     );
 
     const result = await inferSchemaFromSheet({
-      spreadsheetIdDev: 'dummy',
+      spreadsheetId: 'dummy',
       sheetName: 'Sheet1',
       headers: ['ID', '名前', '数値'],
       headerStartCell: 'A1',
@@ -108,8 +108,8 @@ describe('infer-schema-from-sheet + schema-generator integration', () => {
     };
     const { dataRange, ...schema } = inferredSchema;
 
-    // 検証1-2: spreadsheetIdDevが出力に含まれる
-    expect(inferredSchema.spreadsheetIdDev).toBe('dummy');
+    // 検証1-2: spreadsheetIdが出力に含まれる
+    expect(inferredSchema.spreadsheetId).toBe('dummy');
 
     // 検証2: TypeScript型定義生成（MedicalSheet interface）
     const typeDef = generateTypeDefinition('MedicalSheet', schema);

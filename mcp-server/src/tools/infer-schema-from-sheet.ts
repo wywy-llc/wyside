@@ -9,7 +9,7 @@ interface ToolResult {
 }
 
 export interface InferSchemaArgs {
-  spreadsheetIdDev: string;
+  spreadsheetId: string;
   sheetName: string;
   headers: string[];
   lang?: string;
@@ -191,10 +191,10 @@ async function createGoogleClients(): Promise<GoogleClients> {
  * @throws {Error} If required parameters are missing or invalid
  */
 function validateInferSchemaArgs(args: InferSchemaArgs): void {
-  const { spreadsheetIdDev, sheetName, headers, headerStartCell } = args;
+  const { spreadsheetId, sheetName, headers, headerStartCell } = args;
 
-  if (!spreadsheetIdDev || !sheetName) {
-    throw new Error('spreadsheetIdDev and sheetName are required');
+  if (!spreadsheetId || !sheetName) {
+    throw new Error('spreadsheetId and sheetName are required');
   }
   if (!headers || headers.length === 0) {
     throw new Error('headers must be a non-empty array');
@@ -615,8 +615,7 @@ export async function inferSchemaFromSheet(
     // 1. Validate input
     validateInferSchemaArgs(args);
 
-    const { spreadsheetIdDev, sheetName, headers, lang, headerStartCell } =
-      args;
+    const { spreadsheetId, sheetName, headers, lang, headerStartCell } = args;
 
     // 2. Initialize Google API clients
     const { sheets, translate } = await createGoogleClients();
@@ -624,7 +623,7 @@ export async function inferSchemaFromSheet(
     // 3. Resolve exact sheet metadata
     const { exactSheetName } = await resolveSheetMetadata(
       sheets,
-      spreadsheetIdDev,
+      spreadsheetId,
       sheetName,
       debug
     );
@@ -643,7 +642,7 @@ export async function inferSchemaFromSheet(
     // 6. Fetch header row values
     const values = await fetchHeaderRange(
       sheets,
-      spreadsheetIdDev,
+      spreadsheetId,
       headerRangeFull,
       fallbackRange,
       debug
@@ -687,7 +686,7 @@ export async function inferSchemaFromSheet(
       sheetName,
       headerRange,
       fields,
-      spreadsheetIdDev,
+      spreadsheetId,
     };
 
     return {

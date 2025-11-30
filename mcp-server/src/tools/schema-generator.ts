@@ -48,10 +48,6 @@ export interface FeatureSchema {
   headerRange: string;
   /** スプレッドシートID (infer_schema_from_sheetから渡される) */
   spreadsheetId?: string;
-  /** スプレッドシートID（開発環境） */
-  spreadsheetIdDev?: string;
-  /** スプレッドシートID（本番環境） */
-  spreadsheetIdProd?: string;
 }
 
 /**

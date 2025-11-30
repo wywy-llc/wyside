@@ -240,9 +240,7 @@ server.registerTool(
     description:
       'Fetch header row from a sheet and infer FeatureSchema (columns → FieldSchema)',
     inputSchema: {
-      spreadsheetIdDev: z
-        .string()
-        .describe('Spreadsheet ID for development environment'),
+      spreadsheetId: z.string().describe('Spreadsheet ID'),
       sheetName: z.string().describe('Sheet name that contains the header row'),
       headers: z
         .array(z.string())

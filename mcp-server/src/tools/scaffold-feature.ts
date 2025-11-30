@@ -270,13 +270,17 @@ function resolveOperationList(
  * @param names - 機能名のバリエーション
  * @param schema - スキーマ定義
  * @param operationIds - 操作ID配列
+ * @param spreadsheetIdDev - 開発環境スプレッドシートIDのプレースホルダー
+ * @param spreadsheetIdProd - 本番環境スプレッドシートIDのプレースホルダー
  * @returns スキーマデータオブジェクト
  * @remarks スキーマが未定義の場合は空のデータを返す
  */
 function buildSchemaData(
   names: NameVariants,
   schema: FeatureSchema | undefined,
-  operationIds: string[]
+  operationIds: string[],
+  spreadsheetIdDev?: string,
+  spreadsheetIdProd?: string
 ): Partial<TemplateData> {
   if (!schema) {
     return {
@@ -312,8 +316,8 @@ function buildSchemaData(
     operationCodes: operationCodes.join('\n'),
     exportsList,
     schema: {
-      spreadsheetIdDev: schema.spreadsheetIdDev || '',
-      spreadsheetIdProd: schema.spreadsheetIdProd || '',
+      spreadsheetIdDev: spreadsheetIdDev || '',
+      spreadsheetIdProd: spreadsheetIdProd || '',
       sheetName: schema.sheetName || '',
     },
   };
@@ -395,12 +399,6 @@ export async function scaffoldFeature(
     const spreadsheetIdPlaceholderDev = `__SPREADSHEET_ID_${spreadsheetNumber}_DEV__`;
     const spreadsheetIdPlaceholderProd = `__SPREADSHEET_ID_${spreadsheetNumber}_PROD__`;
 
-    // Add placeholders to schema for template rendering
-    if (schema) {
-      schema.spreadsheetIdDev = spreadsheetIdPlaceholderDev;
-      schema.spreadsheetIdProd = spreadsheetIdPlaceholderProd;
-    }
-
     // 名前変換
     const names = convertFeatureName(featureName);
     messages.push(`Scaffolding feature: ${chalk.bold(names.pascal)}`);
@@ -416,8 +414,14 @@ export async function scaffoldFeature(
     // 操作リスト解決
     const operationIds = resolveOperationList(operations, messages);
 
-    // データ構築
-    const schemaData = buildSchemaData(names, schema, operationIds);
+    // データ構築 (プレースホルダーを渡す)
+    const schemaData = buildSchemaData(
+      names,
+      schema,
+      operationIds,
+      spreadsheetIdPlaceholderDev,
+      spreadsheetIdPlaceholderProd
+    );
     const templateData = buildTemplateData(names, operationIds, schemaData);
 
     // コア定義を更新
