@@ -1,3 +1,4 @@
+import { beforeEach, describe, expect, it } from 'vitest';
 import {
   generateExportsList,
   generateOperationCode,
@@ -12,7 +13,6 @@ import {
   OperationContextFactory,
   resetAllFactories,
 } from '../factories/operation-catalog.factory.js';
-import { beforeEach, describe, expect, it } from 'vitest';
 
 describe('Operation Catalog', () => {
   // テスト独立性の保証（シーケンス番号リセット）
@@ -129,7 +129,7 @@ describe('Operation Catalog', () => {
 
       // 生成コードに必要な要素が含まれること
       expect(code).toContain('const getAll');
-      expect(code).toContain('Tasks!A2:B');
+      expect(code).toContain('${sheetName}!A2:B');
       expect(code).toContain('SheetsClient.batchGet');
       expect(code).toContain('async');
     });
@@ -336,8 +336,14 @@ describe('Operation Catalog', () => {
         featureNameCamel: 'test',
         schema: FeatureSchemaFactory.build({
           fields: [
-            { name: 'id', type: 'string', column: 'A', required: true },
-            { name: 'title', type: 'string', column: 'B', required: true },
+            { name: 'id', type: 'string', row: 1, column: 'A', required: true },
+            {
+              name: 'title',
+              type: 'string',
+              row: 1,
+              column: 'B',
+              required: true,
+            },
           ],
           sheetName: 'TestSheet',
           headerRange: 'A1:B1',

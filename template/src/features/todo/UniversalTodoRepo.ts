@@ -1,5 +1,4 @@
 import { SheetsClient } from '@/core/client.js';
-import { TODO_RANGE } from '../../core/constants.js';
 import { Todo } from '../../core/types.js';
 
 // Cache crypto availability check
@@ -28,14 +27,11 @@ function generateUuid(): string {
 /**
  * Universal TODO repository factory for GAS/Node.js environments
  *
- * 🚨 重要: client.tsのSheetsClientを直接使用
- * SheetsClientはIIFEパターンで既にインスタンス化されているため、直接メソッドを呼び出す
- *
  * @example
  * ```typescript
  * import { UniversalTodoRepo } from './features/todo/UniversalTodoRepo.js';
  *
- * const repo = UniversalTodoRepo.create(spreadsheetId);
+ * const repo = UniversalTodoRepo.create(spreadsheetId, 'Todos');
  * const todos = await repo.getTodos();
  * ```
  */
@@ -43,9 +39,12 @@ export const UniversalTodoRepo = (() => {
   /**
    * ✅ GASとNode.jsで完全に同一の実装
    */
-  const create = (spreadsheetId: string) => {
+  const create = (spreadsheetId: string, sheetName: string) => {
+    // Generate range dynamically from sheetName (e.g., "Todos!A2:E")
+    const dataRange = `${sheetName}!A2:E`;
+
     const getTodos = async (): Promise<Todo[]> => {
-      const response = await SheetsClient.batchGet(spreadsheetId, [TODO_RANGE]);
+      const response = await SheetsClient.batchGet(spreadsheetId, [dataRange]);
       const rows = response.valueRanges?.[0]?.values || [];
 
       // Cache crypto availability check
@@ -79,7 +78,7 @@ export const UniversalTodoRepo = (() => {
       ];
 
       // Use values.append API for more reliable row appending
-      await SheetsClient.appendValues(spreadsheetId, TODO_RANGE, [rowValues]);
+      await SheetsClient.appendValues(spreadsheetId, dataRange, [rowValues]);
       return todo;
     };
 
@@ -111,7 +110,7 @@ export const UniversalTodoRepo = (() => {
       ];
 
       // Use values.update API with explicit range
-      const range = `Todos!A${rowNumber}:E${rowNumber}`;
+      const range = `${sheetName}!A${rowNumber}:E${rowNumber}`;
       await SheetsClient.updateValues(spreadsheetId, range, [values]);
     };
 
@@ -124,7 +123,7 @@ export const UniversalTodoRepo = (() => {
 
       // Use clearValues instead of deleteDimension to avoid sheetId issues
       // This marks the row as empty rather than physically deleting it
-      const range = `Todos!A${rowNumber}:E${rowNumber}`;
+      const range = `${sheetName}!A${rowNumber}:E${rowNumber}`;
       await SheetsClient.updateValues(spreadsheetId, range, [
         ['', '', '', '', ''],
       ]);

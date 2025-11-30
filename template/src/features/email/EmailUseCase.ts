@@ -1,18 +1,14 @@
-import { getSpreadsheetId, SpreadsheetType } from '@/config';
 import { GmailClient } from '@/core/gmail-client';
 import { UniversalTodoRepo } from '../todo/UniversalTodoRepo';
 
 /**
  * Email use case with methods for sending TODO emails
  *
- * 🚨 重要: TodoUseCaseと同じIIFEパターンで実装
- * 環境非依存な実装を提供
- *
  * @example
  * ```typescript
  * import { EmailUseCase } from './features/email/EmailUseCase.js';
  *
- * await EmailUseCase.sendTodosEmail('user@example.com', spreadsheetId);
+ * await EmailUseCase.sendTodosEmail('user@example.com');
  * ```
  */
 export const EmailUseCase = (() => {
@@ -65,12 +61,14 @@ export const EmailUseCase = (() => {
    * ✅ GASとNode.jsで完全に同一の実装
    * TODOリストをメール送信
    * @param to 宛先メールアドレス
-   * @param spreadsheetId スプレッドシートID
    */
   const sendTodosEmail = async (to: string): Promise<void> => {
+    // Rollup replace plugin will substitute this with actual spreadsheet ID from .env
+    const spreadsheetId = '__SPREADSHEET_ID_1_DEV__';
+    const sheetName = 'Todos';
+
     // TODOリスト取得
-    const spreadsheetId = getSpreadsheetId(SpreadsheetType.TODOS);
-    const todoRepo = UniversalTodoRepo.create(spreadsheetId);
+    const todoRepo = UniversalTodoRepo.create(spreadsheetId, sheetName);
     const todos = await todoRepo.getTodos();
 
     // メール本文作成

@@ -137,7 +137,9 @@ describe('Schema Generator', () => {
       const result = generateObjectToRow('User', schema);
 
       // 1. 関数シグネチャが正しいこと（パラメータ名は featureName）
-      expect(result).toContain('const UserToRow = (User: User): any[] =>');
+      expect(result).toContain(
+        'const UserToRow = (User: User): (string | undefined)[] =>'
+      );
       // 2. オブジェクトのプロパティがアクセスされること
       expect(result).toContain('User.name');
     });

@@ -13,10 +13,11 @@ const SCAFFOLD_ARGS_PRESETS = {
   basicTask: {
     featureName: 'Task',
     operations: ['getAll', 'create'],
+    spreadsheetNumber: 1,
     schema: {
       fields: [
-        { name: 'id', type: 'string', column: 'A', required: true },
-        { name: 'title', type: 'string', column: 'B', required: true },
+        { name: 'id', type: 'string', row: 1, column: 'A', required: true },
+        { name: 'title', type: 'string', row: 1, column: 'B', required: true },
       ] satisfies FieldSchema[],
       sheetName: 'Tasks',
       headerRange: 'A1:B1',
@@ -26,14 +27,15 @@ const SCAFFOLD_ARGS_PRESETS = {
   medicalSheet: {
     featureName: 'MedicalSheet',
     operations: ['batchUpdate', 'getAll'],
+    spreadsheetNumber: 1,
     schema: {
       fields: [
-        { name: 'mailId', type: 'string', column: 'A' },
-        { name: 'mailIdBranch', type: 'string', column: 'B' },
-        { name: 'subject', type: 'string', column: 'C' },
-        { name: 'receivedDate', type: 'string', column: 'D' },
-        { name: 'reviewer', type: 'string', column: 'E' },
-        { name: 'status', type: 'string', column: 'F' },
+        { name: 'mailId', type: 'string', row: 3, column: 'A' },
+        { name: 'mailIdBranch', type: 'string', row: 3, column: 'B' },
+        { name: 'subject', type: 'string', row: 3, column: 'C' },
+        { name: 'receivedDate', type: 'string', row: 3, column: 'D' },
+        { name: 'reviewer', type: 'string', row: 3, column: 'E' },
+        { name: 'status', type: 'string', row: 3, column: 'F' },
       ] satisfies FieldSchema[],
       sheetName: 'メールボックス',
       headerRange: 'A3:R3',
@@ -43,9 +45,10 @@ const SCAFFOLD_ARGS_PRESETS = {
   rangeWithoutSheet: {
     featureName: 'Data',
     operations: ['getAll'],
+    spreadsheetNumber: 1,
     schema: {
       fields: [
-        { name: 'value', type: 'string', column: 'A' },
+        { name: 'value', type: 'string', row: 1, column: 'A' },
       ] satisfies FieldSchema[],
       sheetName: 'Data',
       headerRange: 'A1:C1',
@@ -55,10 +58,11 @@ const SCAFFOLD_ARGS_PRESETS = {
   allOperations: {
     featureName: 'Item',
     operations: ['all'],
+    spreadsheetNumber: 1,
     schema: {
       fields: [
-        { name: 'id', type: 'string', column: 'A', required: true },
-        { name: 'name', type: 'string', column: 'B', required: true },
+        { name: 'id', type: 'string', row: 1, column: 'A', required: true },
+        { name: 'name', type: 'string', row: 1, column: 'B', required: true },
       ] satisfies FieldSchema[],
       sheetName: 'Items',
       headerRange: 'A1:B1',
@@ -68,9 +72,10 @@ const SCAFFOLD_ARGS_PRESETS = {
   minimalSchema: {
     featureName: 'Custom',
     operations: ['getAll'],
+    spreadsheetNumber: 1,
     schema: {
       fields: [
-        { name: 'id', type: 'string', column: 'A', required: true },
+        { name: 'id', type: 'string', row: 1, column: 'A', required: true },
       ] satisfies FieldSchema[],
       sheetName: 'Custom',
       headerRange: 'A1:A1',
@@ -80,9 +85,10 @@ const SCAFFOLD_ARGS_PRESETS = {
   minimal: {
     featureName: 'Simple',
     operations: ['getAll'],
+    spreadsheetNumber: 1,
     schema: {
       fields: [
-        { name: 'id', type: 'string', column: 'A' },
+        { name: 'id', type: 'string', row: 1, column: 'A' },
       ] satisfies FieldSchema[],
       sheetName: 'Simple',
       headerRange: 'A1:A1',
@@ -100,6 +106,7 @@ const scaffoldFeatureArgsFactory =
   Factory.Sync.makeFactory<ScaffoldFeatureArgs>({
     featureName: Factory.each(i => `Feature${i}`),
     operations: ['getAll', 'create'],
+    spreadsheetNumber: 1,
     schema: FeatureSchemaFactory.build(),
   });
 

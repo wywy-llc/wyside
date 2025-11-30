@@ -69,8 +69,7 @@ export interface ScaffoldFeatureArgs {
   featureName: string;
   operations: string[];
   schema: FeatureSchema;
-  spreadsheetIdDev: string;
-  spreadsheetIdProd: string;
+  spreadsheetNumber: number; // 1-5: Maps to APP_SPREADSHEET_ID_N_DEV/PROD
 }
 
 /**
@@ -375,13 +374,7 @@ export async function scaffoldFeature(
 
   try {
     // Early validation
-    const {
-      featureName,
-      operations,
-      schema,
-      spreadsheetIdDev,
-      spreadsheetIdProd,
-    } = args;
+    const { featureName, operations, schema, spreadsheetNumber } = args;
     if (!featureName) {
       throw new Error('featureName is required');
     }
@@ -391,18 +384,21 @@ export async function scaffoldFeature(
     if (!schema || !schema.fields || schema.fields.length === 0) {
       throw new Error('schema with at least one field is required');
     }
-    if (!spreadsheetIdDev) {
-      throw new Error('spreadsheetIdDev is required');
-    }
-    if (!spreadsheetIdProd) {
-      throw new Error('spreadsheetIdProd is required');
+    if (!spreadsheetNumber || spreadsheetNumber < 1 || spreadsheetNumber > 5) {
+      throw new Error(
+        'spreadsheetNumber is required and must be between 1 and 5'
+      );
     }
 
-    // schemaにspreadsheetIdを追加（引数で上書き可能）
+    // Generate placeholder strings from spreadsheetNumber (1-5)
+    // These will be replaced by Rollup at build time with actual IDs from .env
+    const spreadsheetIdPlaceholderDev = `__SPREADSHEET_ID_${spreadsheetNumber}_DEV__`;
+    const spreadsheetIdPlaceholderProd = `__SPREADSHEET_ID_${spreadsheetNumber}_PROD__`;
+
+    // Add placeholders to schema for template rendering
     if (schema) {
-      schema.spreadsheetIdDev = spreadsheetIdDev || schema.spreadsheetId || '';
-      schema.spreadsheetIdProd =
-        spreadsheetIdProd || schema.spreadsheetId || '';
+      schema.spreadsheetIdDev = spreadsheetIdPlaceholderDev;
+      schema.spreadsheetIdProd = spreadsheetIdPlaceholderProd;
     }
 
     // 名前変換

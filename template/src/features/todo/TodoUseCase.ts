@@ -1,26 +1,26 @@
-import { getSpreadsheetId, SpreadsheetType } from '@/config.js';
 import { Todo } from '../../core/types.js';
 import { UniversalTodoRepo } from './UniversalTodoRepo.js';
 
 /**
  * TODO use case with methods for managing TODOs
  *
- * 🚨 重要: client.tsと完全に同じIIFEパターンで実装
- * 環境非依存な実装を提供
- *
  * @example
  * ```typescript
  * import { TodoUseCase } from './features/todo/TodoUseCase.js';
  *
- * const todos = await TodoUseCase.listTodos(spreadsheetId);
- * await TodoUseCase.addTodo(spreadsheetId, 'Buy milk');
+ * const todos = await TodoUseCase.listTodos();
+ * await TodoUseCase.addTodo('Buy milk');
  * ```
  */
 export const TodoUseCase = (() => {
-  const spreadsheetId = getSpreadsheetId(SpreadsheetType.TODOS);
+  // Rollup replace plugin will substitute this with actual spreadsheet ID from .env
+  // - For GAS build: NODE_ENV=production uses APP_SPREADSHEET_ID_1_PROD
+  // - For Node.js development: uses APP_SPREADSHEET_ID_1_DEV at runtime
+  const spreadsheetId = '__SPREADSHEET_ID_1_DEV__';
+  const sheetName = 'Todos';
 
   // Cache repository instance to avoid redundant creation
-  const repo = UniversalTodoRepo.create(spreadsheetId);
+  const repo = UniversalTodoRepo.create(spreadsheetId, sheetName);
 
   /**
    * ✅ GASとNode.jsで完全に同一の実装

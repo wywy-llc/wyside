@@ -176,13 +176,15 @@ server.registerTool(
           'Generates TypeScript types, row/object converters, validation, and updates core/types.ts.'
       ),
 
-      spreadsheetIdDev: z
-        .string()
-        .describe('Spreadsheet ID for development environment'),
-
-      spreadsheetIdProd: z
-        .string()
-        .describe('Spreadsheet ID for production environment'),
+      spreadsheetNumber: z
+        .number()
+        .int()
+        .min(1)
+        .max(5)
+        .describe(
+          'Spreadsheet slot number (1-5). Maps to APP_SPREADSHEET_ID_N_DEV/PROD in .env. ' +
+            'Generates __SPREADSHEET_ID_N_DEV__ placeholder that Rollup replaces at build time.'
+        ),
     },
   },
   async (args: ScaffoldFeatureArgs) => {
@@ -428,8 +430,7 @@ async function testScaffoldFeature(): Promise<void> {
       featureName: process.env.TEST_FEATURE_NAME,
       operations,
       schema,
-      spreadsheetIdDev: process.env.TEST_SPREADSHEET_ID_DEV || '1ABC-DEV',
-      spreadsheetIdProd: process.env.TEST_SPREADSHEET_ID_PROD || '1XYZ-PROD',
+      spreadsheetNumber: 1, // Maps to APP_SPREADSHEET_ID_1_DEV/PROD
     });
     console.error('✅ Test result:', JSON.stringify(result, null, 2));
   } catch (error) {

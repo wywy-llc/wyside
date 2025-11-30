@@ -9,9 +9,6 @@ import { generateUuid } from '../../core/utils.js';
 /**
  * Universal {{featureName}} repository factory for GAS/Node.js environments
  *
- * 🚨 重要: client.tsのSheetsClientを直接使用
- * SheetsClientはIIFEパターンで既にインスタンス化されているため、直接メソッドを呼び出す
- *
  * @example
  * ```typescript
  * import { Universal{{featureName}}Repo } from './features/{{featureNameCamel}}/Universal{{featureName}}Repo.js';

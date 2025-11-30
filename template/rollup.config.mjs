@@ -210,21 +210,25 @@ function ${name}() {
   };
 }
 
-// Determine environment (prod or dev)
-const isProduction = process.env.NODE_ENV === 'production';
-const suffix = isProduction ? 'PROD' : 'DEV';
-
-// Build spreadsheet ID map from environment variables
-const spreadsheetIdMap = {};
+// Build replacement values for all spreadsheet IDs (1-5)
+const replacementValues = {};
 for (let i = 1; i <= 5; i++) {
-  const key = `APP_SPREADSHEET_ID_${i}_${suffix}`;
-  const id = process.env[key];
-  if (id && id.trim()) {
-    spreadsheetIdMap[i] = id.trim();
-  }
-}
+  const devKey = `APP_SPREADSHEET_ID_${i}_DEV`;
+  const prodKey = `APP_SPREADSHEET_ID_${i}_PROD`;
 
-const spreadsheetIdMapJson = JSON.stringify(spreadsheetIdMap);
+  const devId = process.env[devKey] || '';
+  const prodId = process.env[prodKey] || '';
+
+  if (!devId) {
+    console.info(`ℹ️  ${devKey} can be configured in .env`);
+  }
+  if (!prodId) {
+    console.info(`ℹ️  ${prodKey} can be configured in .env`);
+  }
+
+  replacementValues[`__SPREADSHEET_ID_${i}_DEV__`] = devId;
+  replacementValues[`__SPREADSHEET_ID_${i}_PROD__`] = prodId;
+}
 
 export default {
   input: 'src/main.ts',
@@ -261,13 +265,11 @@ export default {
     }),
     // Remove Node.js-only code for GAS deployment
     removeNodeCode(),
-    // Replace environment variables at build time (must run after TypeScript)
+    // Replace environment-specific placeholders at build time
     replace({
       preventAssignment: true,
       delimiters: ['', ''],
-      values: {
-        "'__BUILD_SPREADSHEET_ID_MAP__'": spreadsheetIdMapJson,
-      },
+      values: replacementValues,
     }),
     cleanup({ comments: 'none', extensions: ['.ts', '.js'] }),
     // Expose GAS functions to global scope (must be before prettier)

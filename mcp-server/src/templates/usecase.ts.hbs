@@ -4,9 +4,6 @@ import { Universal{{featureName}}Repo } from './Universal{{featureName}}Repo.js'
 /**
  * {{featureName}} use case with methods for managing {{featureName}}s
  *
- * 🚨 重要: client.tsと完全に同じIIFEパターンで実装
- * 環境非依存な実装を提供
- *
  * @example
  * ```typescript
  * import { {{featureName}}UseCase } from './features/{{featureNameCamel}}/{{featureName}}UseCase.js';
@@ -19,13 +16,10 @@ import { Universal{{featureName}}Repo } from './Universal{{featureName}}Repo.js'
  * ```
  */
 export const {{featureName}}UseCase = (() => {
-  // Auto-generated from schema
-  // Environment detection: GAS uses ScriptApp, Node.js uses process
-  const isProduction = typeof ScriptApp !== 'undefined';
-
-  const spreadsheetId = isProduction
-    ? '{{schema.spreadsheetIdProd}}'
-    : '{{schema.spreadsheetIdDev}}';
+  // Rollup replace plugin will substitute this with actual spreadsheet ID from .env
+  // - For GAS build: NODE_ENV=production uses APP_SPREADSHEET_ID_N_PROD
+  // - For Node.js development: uses APP_SPREADSHEET_ID_N_DEV at runtime
+  const spreadsheetId = '{{schema.spreadsheetIdDev}}';
   const sheetName = '{{schema.sheetName}}';
 
   // Cache repository instance to avoid redundant creation
